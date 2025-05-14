@@ -1,0 +1,15 @@
+// public/silent-check-sso.html /*
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Silent Check SSO</title>
+    <script src="https://cdn.jsdelivr.net/npm/keycloak-js@21.1.3/dist/keycloak.min.js"></script>
+  </head>
+  <body>
+    <script>
+      parent.postMessage(location.href, location.origin);
+    </script>
+  </body>
+</html>
+*/
