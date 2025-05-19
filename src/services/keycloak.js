@@ -2,9 +2,9 @@
 import Keycloak from 'keycloak-js';
 
 const keycloakConfig = {
-  url: 'http://localhost:8080/',
-  realm: 'developer',
-  clientId: 'expectra',
+  url: 'http://localhost:8180/',
+  realm: 'ExpDev001',
+  clientId: 'dev001',
 };
 
 // Create and export the Keycloak instance

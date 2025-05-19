@@ -7,7 +7,6 @@ const sidebarStyle = {
   width: '250px',
   background: '#3d1fcc', // Púrpura algo más oscuro
   padding: '1rem',
-  border: '2px solid red',
   height: '100vh',
   overflowY: 'auto',
 };
