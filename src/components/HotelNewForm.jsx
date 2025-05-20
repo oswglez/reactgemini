@@ -7,7 +7,6 @@ import {
   TextInput,
   Dropdown,
   Button,
-  NumberInput,
   InlineNotification,
   Loading,
   ComposedModal,
@@ -15,28 +14,34 @@ import {
   ModalBody,
   ModalFooter,
 } from '@carbon/react';
+import { getData as getCountryDataList } from 'country-list'; // Renombrado para claridad
+import {
+  AsYouType,
+  getExampleNumber,
+  parsePhoneNumberFromString,
+  getCountryCallingCode,
+  isValidPhoneNumber,
+} from 'libphonenumber-js';
 
-// --- Estilos para el layout del formulario ---
+// --- Estilos (sin cambios) ---
 const formContainerStyle = {
   padding: '2rem',
   maxWidth: '960px',
-  minWidth: '700px', // Para ayudar a prevenir el encogimiento excesivo
+  minWidth: '700px',
   margin: '2rem auto',
   backgroundColor: '#ffffff',
   border: '1px solid #e0e0e0',
   borderRadius: '8px',
   boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
 };
-
 const formRowStyle = {
   display: 'flex',
   alignItems: 'flex-start',
   marginBottom: '1.5rem',
   gap: '1.5rem',
 };
-
 const labelStyle = {
-  flex: '0 0 200px', // Ajusta este ancho según tus etiquetas
+  flex: '0 0 200px',
   paddingTop: '0.5rem',
   textAlign: 'left',
   fontSize: '0.875rem',
@@ -44,12 +49,10 @@ const labelStyle = {
   lineHeight: '1.4',
   wordBreak: 'break-word',
 };
-
 const inputContainerStyle = {
   flex: '1 1 auto',
   minWidth: '250px',
 };
-
 const formSectionTitleStyle = {
   fontSize: '1.375rem',
   fontWeight: 600,
@@ -59,7 +62,6 @@ const formSectionTitleStyle = {
   borderBottom: '1px solid #dfe3e6',
   color: '#161616',
 };
-
 const buttonContainerStyle = {
   marginTop: '3rem',
   display: 'flex',
@@ -67,39 +69,17 @@ const buttonContainerStyle = {
   gap: '1rem',
 };
 
-// --- Funciones Helper para Dropdown Placeholders ---
+// --- Funciones Helper para Dropdown Placeholders (sin cambios) ---
 const createPlaceholderItem = (idSuffix, text) => ({ id: `placeholder-${idSuffix}`, text: `Select a ${text}...` });
 const createLoadingItem = (idSuffix, text) => ({ id: `loading-${idSuffix}`, text: `Loading ${text}...` });
 const createErrorItem = (idSuffix, text) => ({ id: `error-${idSuffix}`, text: `Error loading ${text}` });
 const createSelectChainFirstItem = () => ({ id: `select-chain-brand`, text: 'Select chain first...' });
 const createNoItemsItem = (idSuffix, text) => ({ id: `no-items-${idSuffix}`, text: `No ${text} available` });
 
-// --- Listas de Items para Dropdowns (estáticas o cargadas) ---
-const countryItems = [
-  createPlaceholderItem('country', 'country'),
-  { id: 'US', text: 'United States' },
-  { id: 'CA', text: 'Canada' },
-  { id: 'MX', text: 'Mexico' },
-];
-
-const contactTypeItems = [
-  createPlaceholderItem('contact-type', 'contact type'),
-  { id: 'MAIN', text: 'Main' },
-  { id: 'BILLING', text: 'Billing' },
-  { id: 'SALES', text: 'Sales' },
-];
-
-const hotelStatusItems = [
-  createPlaceholderItem('hotel-status', 'hotel status'),
-  { id: 'A', text: 'Active' },
-  { id: 'I', text: 'Inactive' },
-  { id: 'P', text: 'Pending' },
-];
 
 function HotelNewForm() {
   const navigate = useNavigate();
 
-  // Estados del Formulario
   const [chains, setChains] = useState([createLoadingItem('chains', 'chains')]);
   const [selectedChain, setSelectedChain] = useState(null);
   const [brands, setBrands] = useState([createSelectChainFirstItem()]);
@@ -107,44 +87,59 @@ function HotelNewForm() {
   const [loadingChains, setLoadingChains] = useState(true);
   const [loadingBrands, setLoadingBrands] = useState(false);
 
+  // Estado para la lista de países, ahora se cargará dinámicamente
+  const [countryDropdownItems, setCountryDropdownItems] = useState([createLoadingItem('country', 'countries')]);
+
   const [hotelCode, setHotelCode] = useState('');
   const [hotelName, setHotelName] = useState('');
-  const [selectedHotelStatus, setSelectedHotelStatus] = useState(null);
   const [streetAddress, setStreetAddress] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [selectedCountry, setSelectedCountry] = useState(null); // Almacena el objeto {id: 'US', text: 'United States (+1)', code: 'US'}
   const [stateProvince, setStateProvince] = useState('');
   const [city, setCity] = useState('');
   const [zipCode, setZipCode] = useState('');
-  const [mainPhoneNumber, setMainPhoneNumber] = useState('');
+  const [mainPhoneNumberRaw, setMainPhoneNumberRaw] = useState('');
+  const [mainPhoneNumberFormatted, setMainPhoneNumberFormatted] = useState('');
+  const [mainPhoneNumberError, setMainPhoneNumberError] = useState('');
   const [website, setWebsite] = useState('');
-  const [totalFloors, setTotalFloors] = useState('');
-  const [totalRooms, setTotalRooms] = useState('');
   const [disclaimer, setDisclaimer] = useState('');
-
-  const [pmsProviderItems, setPmsProviderItems] = useState([createLoadingItem('pms-vendors', 'PMS Vendors')]);
-  const [selectedPmsProvider, setSelectedPmsProvider] = useState(null);
-  const [pmsHotelId, setPmsHotelId] = useState('');
-  const [pmsToken, setPmsToken] = useState('');
-  const [crsProviderItems, setCrsProviderItems] = useState([createLoadingItem('crs-vendors', 'CRS Vendors')]);
-  const [selectedCrsProvider, setSelectedCrsProvider] = useState(null);
-  const [crsHotelId, setCrsHotelId] = useState('');
-  const [crsToken, setCrsToken] = useState('');
-  const [loadingPms, setLoadingPms] = useState(true);
-  const [loadingCrs, setLoadingCrs] = useState(true);
 
   const [contactFirstName, setContactFirstName] = useState('');
   const [contactLastName, setContactLastName] = useState('');
   const [contactTitle, setContactTitle] = useState('');
-  const [selectedContactType, setSelectedContactType] = useState(null);
+  const [contactMobilePhoneRaw, setContactMobilePhoneRaw] = useState('');
+  const [contactMobilePhoneFormatted, setContactMobilePhoneFormatted] = useState('');
+  const [contactMobilePhoneError, setContactMobilePhoneError] = useState('');
   const [contactEmail, setContactEmail] = useState('');
-  const [contactLocalPhone, setContactLocalPhone] = useState('');
-  const [contactMobilePhone, setContactMobilePhone] = useState('');
-  const [contactFax, setContactFax] = useState('');
 
   const [feedback, setFeedback] = useState({ type: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [openCancelModal, setOpenCancelModal] = useState(false);
 
+  // Cargar lista de países al montar el componente
+  useEffect(() => {
+    try {
+      const rawCountries = getCountryDataList(); // Obtiene [{code: 'US', name: 'United States'}, ...]
+      const formattedCountries = rawCountries.map(country => {
+        let label = country.name;
+        try {
+          // `getCountryCallingCode` espera un código ISO de 2 letras válido.
+          // `country-list` debería proporcionar códigos válidos.
+          const callingCode = getCountryCallingCode(country.code);
+          label = `${country.name} (+${callingCode})`;
+        } catch (e) {
+          // Algunos códigos de `country-list` podrían no ser reconocidos por `libphonenumber-js`
+          // o ser regiones sin código de llamada directo.
+          console.warn(`Could not get calling code for country: ${country.name} (${country.code})`);
+        }
+        return { id: country.code, text: label, code: country.code }; // Guardamos el código ISO original también
+      }).sort((a, b) => a.text.localeCompare(b.text)); // Ordenar alfabéticamente
+
+      setCountryDropdownItems([createPlaceholderItem('country', 'country'), ...formattedCountries]);
+    } catch (error) {
+      console.error("Error loading country list:", error);
+      setCountryDropdownItems([createErrorItem('country', 'countries')]);
+    }
+  }, []);
 
   const fetchChainsData = useCallback(async () => {
     setLoadingChains(true);
@@ -165,80 +160,12 @@ function HotelNewForm() {
     }
   }, []);
 
-  const fetchProviders = useCallback(async (providerType, setItemsFunc, setLoadingFunc, placeholderText, errorTextKey) => {
-    setLoadingFunc(true);
-    setItemsFunc([createLoadingItem(errorTextKey, placeholderText)]);
-    try {
-      const response = await fetch(`http://localhost:8090/api/provider/type?type=${providerType}`);
-      if (!response.ok) throw new Error(`Network response for ${providerType} providers was not ok`);
-      const data = await response.json();
-      setItemsFunc(data && data.length > 0 ?
-        [
-          createPlaceholderItem(errorTextKey, placeholderText),
-          ...data.map(p => ({ id: p.providerName, text: p.providerName }))
-        ]
-        : [createNoItemsItem(errorTextKey, placeholderText)]
-      );
-    } catch (error) {
-      console.error(`Error fetching ${providerType} providers:`, error);
-      setItemsFunc([createErrorItem(errorTextKey, errorTextKey)]);
-      setFeedback({ type: 'error', message: `Error loading ${providerType} providers: ${error.message}` });
-    } finally {
-      setLoadingFunc(false);
-    }
-  }, []);
-  
-  const resetFormFields = useCallback(() => {
-    setSelectedChain(null); // Esto disparará el useEffect de brands para resetearse
-    // setSelectedBrand(null); // Ya se resetea en el useEffect de selectedChain
-    
-    setHotelCode('');
-    setHotelName('');
-    setSelectedHotelStatus(null);
-    setStreetAddress('');
-    setSelectedCountry(null);
-    setStateProvince('');
-    setCity('');
-    setZipCode('');
-    setMainPhoneNumber('');
-    setWebsite('');
-    setTotalFloors('');
-    setTotalRooms('');
-    setDisclaimer('');
-
-    setSelectedPmsProvider(null);
-    setPmsHotelId('');
-    setPmsToken('');
-    setSelectedCrsProvider(null);
-    setCrsHotelId('');
-    setCrsToken('');
-
-    setContactFirstName('');
-    setContactLastName('');
-    setContactTitle('');
-    setSelectedContactType(null);
-    setContactEmail('');
-    setContactLocalPhone('');
-    setContactMobilePhone('');
-    setContactFax('');
-
-    // Considerar si recargar todos los dropdowns es deseable o solo los principales.
-    // Si el usuario va a crear muchos hoteles seguidos, recargar puede ser bueno.
-    fetchChainsData(); 
-    fetchProviders('PMS', setPmsProviderItems, setLoadingPms, 'PMS Vendor', 'pms-vendors');
-    fetchProviders('CRS', setCrsProviderItems, setLoadingCrs, 'CRS Vendor', 'crs-vendors');
-
-  }, [fetchChainsData, fetchProviders]); // Dependencias de useCallback
-
-
   useEffect(() => {
     fetchChainsData();
-    fetchProviders('PMS', setPmsProviderItems, setLoadingPms, 'PMS Vendor', 'pms-vendors');
-    fetchProviders('CRS', setCrsProviderItems, setLoadingCrs, 'CRS Vendor', 'crs-vendors');
-  }, [fetchChainsData, fetchProviders]); // Llamar al montar y si las funciones cambian
+  }, [fetchChainsData]);
 
   useEffect(() => {
-    if (selectedChain && selectedChain.id && !selectedChain.id.startsWith('placeholder-') && !selectedChain.id.startsWith('loading-') && !selectedChain.id.startsWith('error-')) {
+    if (selectedChain && selectedChain.id && !selectedChain.id.startsWith('placeholder-')) {
       const fetchBrandsData = async () => {
         setLoadingBrands(true);
         setBrands([createLoadingItem('brands', 'brands')]);
@@ -265,39 +192,158 @@ function HotelNewForm() {
     setSelectedBrand(null);
   }, [selectedChain]);
 
+  const handlePhoneNumberChange = (e, countryCodeISO, setRawValue, setFormattedValue, setErrorValue) => {
+    const rawValue = e.target.value;
+    setRawValue(rawValue); // Siempre actualiza el valor raw
+
+    if (countryCodeISO) {
+      const formatter = new AsYouType(countryCodeISO);
+      // Formatea el valor raw completo cada vez para manejar pegados y borrados correctamente
+      let formatted = '';
+      for (const char of rawValue) { // Re-formatear el raw
+        if (/\d/.test(char) || char === '+') { // Solo procesar dígitos y el '+' inicial
+            formatted = formatter.input(char);
+        } else {
+            // Para otros caracteres (como espacios, paréntesis que el usuario podría escribir)
+            // AsYouType los maneja internamente, pero si queremos un control más estricto
+            // podríamos filtrarlos aquí o simplemente dejar que AsYouType haga su trabajo.
+            // Por ahora, confiamos en AsYouType. Si el usuario escribe caracteres no válidos,
+            // el formateo podría detenerse o comportarse de forma extraña.
+            // La validación final en onBlur/submit lo detectará.
+        }
+      }
+      // Si rawValue está vacío después de la iteración (ej. solo tenía caracteres no válidos), 
+      // el `formatted` de AsYouType podría no estar vacío si ya había formateado algo.
+      // Por eso, es mejor formatear el rawValue completo.
+      const finalFormatter = new AsYouType(countryCodeISO);
+      setFormattedValue(finalFormatter.input(rawValue));
+
+      setErrorValue(''); // Limpiar error mientras escribe
+    } else {
+      setFormattedValue(rawValue); // Sin país, mostrar raw como formateado
+      if (rawValue) { // Solo mostrar error si hay algo escrito y no hay país
+        setErrorValue('Please select a country first to format/validate phone number.');
+      } else {
+        setErrorValue('');
+      }
+    }
+  };
+
+  const validatePhoneNumber = (numberRaw, countryCodeISO, fieldName, setErrorFunc) => {
+    if (!numberRaw || numberRaw.trim() === '') { // Si el campo está vacío
+      setErrorFunc(''); // No hay número, no hay error (a menos que sea requerido explícitamente)
+      return null; // Devolver null para que no se envíe
+    }
+    if (!countryCodeISO) {
+      setErrorFunc(`${fieldName}: Select a country to validate phone.`);
+      return null; 
+    }
+    try {
+      const phoneNumber = parsePhoneNumberFromString(numberRaw, countryCodeISO);
+      if (phoneNumber && phoneNumber.isValid()) {
+        setErrorFunc('');
+        return phoneNumber.format('E.164');
+      } else {
+        setErrorFunc(`${fieldName}: Invalid phone number for selected country.`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`Phone validation error for ${fieldName}:`, error);
+      setErrorFunc(`${fieldName}: Error validating phone number.`);
+      return null;
+    }
+  };
+
+  const getPhonePlaceholder = (countryCodeISO) => {
+    if (countryCodeISO) {
+      try {
+        const example = getExampleNumber(countryCodeISO, 'NATIONAL');
+        if (example) return example.formatNational();
+      } catch (e) { /* No hacer nada si no hay ejemplo */ }
+    }
+    return 'Enter phone number';
+  };
+
+  const resetFormFields = useCallback(() => {
+    setSelectedChain(null);
+    setHotelCode('');
+    setHotelName('');
+    setStreetAddress('');
+    setSelectedCountry(null); // Esto también limpiará los placeholders de teléfono
+    setStateProvince('');
+    setCity('');
+    setZipCode('');
+    setMainPhoneNumberRaw('');
+    setMainPhoneNumberFormatted('');
+    setMainPhoneNumberError('');
+    setWebsite('');
+    setDisclaimer('');
+    setContactFirstName('');
+    setContactLastName('');
+    setContactTitle('');
+    setContactMobilePhoneRaw('');
+    setContactMobilePhoneFormatted('');
+    setContactMobilePhoneError('');
+    setContactEmail('');
+    fetchChainsData();
+  }, [fetchChainsData]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setFeedback({ type: '', message: '' });
+    setFeedback({ type: '', message: '' }); // Limpiar feedback anterior
+
+    const currentCountryCode = selectedCountry ? selectedCountry.code : null;
+
+    // Forzar validación final antes de enviar
+    const finalValidatedMainPhone = validatePhoneNumber(mainPhoneNumberRaw, currentCountryCode, "Hotel Phone", setMainPhoneNumberError);
+    const finalValidatedContactPhone = validatePhoneNumber(contactMobilePhoneRaw, currentCountryCode, "Contact Phone", setContactMobilePhoneError);
+
+    // Verificar si las validaciones de teléfono produjeron errores
+    let phoneValidationFailed = false;
+    if (mainPhoneNumberRaw && !finalValidatedMainPhone) {
+        setMainPhoneNumberError("Hotel Phone: Invalid phone number for selected country."); // Re-asegurar mensaje de error
+        phoneValidationFailed = true;
+    }
+    if (contactMobilePhoneRaw && !finalValidatedContactPhone) {
+        setContactMobilePhoneError("Contact Phone: Invalid phone number for selected country."); // Re-asegurar mensaje de error
+        phoneValidationFailed = true;
+    }
+
+    // Validar campos requeridos del formulario
+    if (!hotelName || !selectedBrand?.id || !contactFirstName || !contactLastName || !contactEmail || !selectedCountry?.id) {
+      setFeedback({ type: 'error', message: 'Please fill in all required fields marked with an asterisk (*).' });
+      setIsSubmitting(false); // Asegurar que isSubmitting se resetee
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    if (phoneValidationFailed) {
+        setFeedback({ type: 'error', message: 'Please correct the invalid phone numbers before submitting.' });
+        setIsSubmitting(false); // Asegurar que isSubmitting se resetee
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+    }
+    
     setIsSubmitting(true);
 
     const formData = {
       hotelCode: hotelCode || null,
       hotelName,
-      hotelStatus: selectedHotelStatus && !selectedHotelStatus.id.startsWith('placeholder-') ? selectedHotelStatus.id : null,
-      brandId: selectedBrand && !selectedBrand.id.startsWith('placeholder-') && !selectedBrand.id.startsWith('select-chain-') && !selectedBrand.id.startsWith('no-items-') ? parseInt(selectedBrand.id, 10) : null,
-      localPhone: mainPhoneNumber || null,
-      pmsVendor: selectedPmsProvider && !selectedPmsProvider.id.startsWith('placeholder-') ? selectedPmsProvider.id : null,
-      pmsHotelId: pmsHotelId ? parseInt(pmsHotelId) : null,
-      pmsToken: pmsToken || null,
-      crsVendor: selectedCrsProvider && !selectedCrsProvider.id.startsWith('placeholder-') ? selectedCrsProvider.id : null,
-      crsHotelId: crsHotelId ? parseInt(crsHotelId) : null,
-      crsToken: crsToken || null,
+      hotelStatus: 'P',
+      brandId: parseInt(selectedBrand.id, 10),
+      localPhone: finalValidatedMainPhone, // Usar el número validado y formateado a E.164
       disclaimer: disclaimer || null,
-      totalFloors: totalFloors !== '' ? parseInt(totalFloors, 10) : null,
-      totalRooms: totalRooms !== '' ? parseInt(totalRooms, 10) : null,
       hotelWebsiteUrl: website || null,
       mainContact: {
         firstName: contactFirstName,
         lastName: contactLastName,
         contactTitle: contactTitle || null,
         contactEmail,
-        contactLocalNumber: contactLocalPhone || null,
-        contactMobileNumber: contactMobilePhone || null,
-        contactFaxNumber: contactFax || null,
-        contactType: selectedContactType && !selectedContactType.id.startsWith('placeholder-') ? selectedContactType.id : 'MAIN',
+        contactMobileNumber: finalValidatedContactPhone, // Usar el número validado y formateado a E.164
+        contactType: 'MAIN',
       },
       mainAddress: {
-        country: selectedCountry && !selectedCountry.id.startsWith('placeholder-') ? selectedCountry.id : null,
+        country: currentCountryCode,
         state: stateProvince || null,
         city: city || null,
         street: streetAddress || null,
@@ -305,65 +351,41 @@ function HotelNewForm() {
         addressType: 'MAIN',
       },
     };
-
-    if (!formData.hotelName || !formData.brandId || !formData.mainContact.firstName || !formData.mainContact.lastName || !formData.mainContact.contactEmail || !formData.mainAddress.country || !formData.hotelStatus) {
-      setFeedback({ type: 'error', message: 'Please fill in all required fields marked with an asterisk (*).' });
-      setIsSubmitting(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
+    
     console.log('Submitting Form Data to Backend:', JSON.stringify(formData, null, 2));
 
     try {
-      const response = await fetch('http://localhost:8090/api/hotels/createFull', { // Verifica tu endpoint
+      const response = await fetch('http://localhost:8090/api/hotels/createFull', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-
-      setIsSubmitting(false); // Mover aquí para reactivar botones antes del posible delay
-
+      
       if (!response.ok) {
         const errorBody = await response.text();
-        console.error('Backend error response:', errorBody);
         throw new Error(`API Error ${response.status}: ${errorBody || response.statusText}`);
       }
       const result = await response.json();
-      console.log('Hotel created successfully via API:', result);
       setFeedback({ type: 'success', message: `Hotel "${result.hotelName || formData.hotelName}" created successfully! (ID: ${result.hotelId || 'N/A'})` });
-
       resetFormFields();
       window.scrollTo({ top: 0, behavior: 'smooth' });
-
-      setTimeout(() => {
-     //   if (feedback.type === 'success') { // Solo navega si el feedback es de éxito y no ha cambiado
-            navigate(-1); // Navega a la pantalla anterior
-     //   }
-      }, 2500); // Delay para que el usuario vea el mensaje
-
+      setTimeout(() => navigate(-1), 2500);
     } catch (error) {
       console.error('Error submitting hotel creation form:', error);
       setFeedback({ type: 'error', message: `Error creating hotel: ${error.message}` });
+    } finally {
       setIsSubmitting(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
-  const handleCancelAttempt = () => {
-    setOpenCancelModal(true);
-  };
-
+  const handleCancelAttempt = () => setOpenCancelModal(true);
   const proceedWithCancel = () => {
-    console.log("Confirmed cancel - resetting form and navigating back");
     resetFormFields();
     setFeedback({ type: '', message: '' });
     setOpenCancelModal(false);
     navigate(-1);
   };
-
-  const closeModal = () => {
-    setOpenCancelModal(false);
-  };
+  const closeModal = () => setOpenCancelModal(false);
 
   return (
     <div style={formContainerStyle}>
@@ -373,7 +395,6 @@ function HotelNewForm() {
       </p>
 
       {isSubmitting && <Loading description="Submitting form..." withOverlay={false} style={{ marginBottom: '1rem' }} />}
-
       {feedback.message && (
         <div style={{ marginBottom: '1rem' }}>
           <InlineNotification
@@ -385,12 +406,11 @@ function HotelNewForm() {
           />
         </div>
       )}
-
-      {(loadingChains || loadingPms || loadingCrs) && !isSubmitting &&
+      {loadingChains && !isSubmitting &&
         <Loading description="Loading initial data..." withOverlay={false} style={{ marginBottom: '1rem' }} />}
 
       <Form onSubmit={handleSubmit}>
-        {/* --- Sección Chain & Brand --- */}
+        {/* --- Sección Chain & Brand (sin cambios respecto a la última versión) --- */}
         <h2 style={formSectionTitleStyle}>Chain & Brand</h2>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="chain-dropdown">Chain <span style={{ color: 'red' }}>*</span></FormLabel>
@@ -399,9 +419,9 @@ function HotelNewForm() {
               id="chain-dropdown"
               titleText=""
               label={loadingChains ? "Loading..." : (chains[0]?.text || "Select a chain...")}
-              items={chains || []}
+              items={chains}
               itemToString={(item) => (item ? item.text : '')}
-              onChange={({ selectedItem }) => setSelectedChain(selectedItem && !selectedItem.id.startsWith('placeholder-') && !selectedItem.id.startsWith('loading-') && !selectedItem.id.startsWith('error-') ? selectedItem : null)}
+              onChange={({ selectedItem }) => setSelectedChain(selectedItem && !selectedItem.id.startsWith('placeholder-') ? selectedItem : null)}
               selectedItem={selectedChain}
               style={{ width: '100%' }}
               disabled={loadingChains}
@@ -415,12 +435,12 @@ function HotelNewForm() {
               id="brand-dropdown"
               titleText=""
               label={loadingBrands ? "Loading..." : (!selectedChain || selectedChain.id.startsWith('placeholder-') ? "Select chain first" : (brands[0]?.text || "Select a brand..."))}
-              items={brands || []}
+              items={brands}
               itemToString={(item) => (item ? item.text : '')}
-              onChange={({ selectedItem }) => setSelectedBrand(selectedItem && !selectedItem.id.startsWith('placeholder-') && !selectedItem.id.startsWith('select-chain-') && !selectedItem.id.startsWith('no-items-') && !selectedItem.id.startsWith('loading-') && !selectedItem.id.startsWith('error-') ? selectedItem : null)}
+              onChange={({ selectedItem }) => setSelectedBrand(selectedItem && !selectedItem.id.startsWith('placeholder-') && !selectedItem.id.startsWith('select-chain-') && !selectedItem.id.startsWith('no-items-') ? selectedItem : null)}
               selectedItem={selectedBrand}
               style={{ width: '100%' }}
-              disabled={!selectedChain || !!selectedChain?.id.startsWith('placeholder-') || loadingBrands || !brands.length || !!brands[0]?.id.startsWith('select-chain-') || !!brands[0]?.id.startsWith('loading-') || !!brands[0]?.id.startsWith('error-') || !!brands[0]?.id.startsWith('no-items-')}
+              disabled={!selectedChain || !!selectedChain?.id.startsWith('placeholder-') || loadingBrands || !brands.length || !!brands[0]?.id.startsWith('select-chain-') || !!brands[0]?.id.startsWith('no-items-') || !!brands[0]?.id.startsWith('error-') || !!brands[0]?.id.startsWith('loading-')}
             />
           </div>
         </div>
@@ -432,31 +452,8 @@ function HotelNewForm() {
           <div style={inputContainerStyle}><TextInput id="hotel-code" labelText="" placeholder="Internal Hotel Code" value={hotelCode} onChange={(e) => setHotelCode(e.target.value)} style={{ width: '100%' }}/></div>
         </div>
         <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="hotel-name">Property Name <span style={{color: 'red'}}>*</span></FormLabel>
+          <FormLabel style={labelStyle} htmlFor="hotel-name">Name <span style={{color: 'red'}}>*</span></FormLabel>
           <div style={inputContainerStyle}><TextInput id="hotel-name" labelText="" placeholder="Official Property Name" value={hotelName} onChange={(e) => setHotelName(e.target.value)} style={{ width: '100%' }} required /></div>
-        </div>
-         <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="hotel-status-dropdown">Hotel Status <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
-            <Dropdown 
-              id="hotel-status-dropdown" 
-              titleText="" 
-              label={hotelStatusItems[0]?.text || "Select hotel status..."} // Usa el texto del primer item (placeholder)
-              items={hotelStatusItems} 
-              itemToString={(item) => (item ? item.text : '')} 
-              onChange={({ selectedItem }) => setSelectedHotelStatus(selectedItem.id.startsWith('placeholder-') ? null : selectedItem)} 
-              selectedItem={selectedHotelStatus} 
-              style={{ width: '100%' }}
-            />
-          </div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="total-floors">Total Floors</FormLabel>
-          <div style={inputContainerStyle}><NumberInput id="total-floors" label="" hideLabel value={totalFloors === '' ? undefined : Number(totalFloors)} onChange={(event, { value }) => setTotalFloors(value === undefined || isNaN(value) ? '' : String(value))} min={0} style={{ width: '100%' }} placeholder="Number of floors"/></div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="total-rooms">Total Rooms</FormLabel>
-          <div style={inputContainerStyle}><NumberInput id="total-rooms" label="" hideLabel value={totalRooms === '' ? undefined : Number(totalRooms)} onChange={(event, { value }) => setTotalRooms(value === undefined || isNaN(value) ? '' : String(value))} min={0} style={{ width: '100%' }} placeholder="Total number of rooms"/></div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="street-address">Street Address</FormLabel>
@@ -464,7 +461,30 @@ function HotelNewForm() {
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="country-dropdown">Country <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}><Dropdown id="country-dropdown" titleText="" label={countryItems[0]?.text || "Select a country..."} items={countryItems} itemToString={(item) => (item ? item.text : '')} onChange={({ selectedItem }) => setSelectedCountry(selectedItem.id.startsWith('placeholder-') ? null : selectedItem)} selectedItem={selectedCountry} style={{ width: '100%' }} /></div>
+          <div style={inputContainerStyle}>
+            <Dropdown
+              id="country-dropdown"
+              titleText=""
+              label={selectedCountry ? selectedCountry.text : (countryDropdownItems[0]?.text || "Select a country...")}
+              items={countryDropdownItems} // Usar la lista de países cargada
+              itemToString={(item) => (item ? item.text : '')}
+              onChange={({ selectedItem }) => {
+                const newCountry = selectedItem.id.startsWith('placeholder-') ? null : selectedItem;
+                setSelectedCountry(newCountry);
+                const newCountryCode = newCountry ? newCountry.code : null;
+                // Limpiar/reformatear teléfonos al cambiar de país
+                setMainPhoneNumberRaw(''); setMainPhoneNumberFormatted(''); setMainPhoneNumberError('');
+                setContactMobilePhoneRaw(''); setContactMobilePhoneFormatted(''); setContactMobilePhoneError('');
+                // Actualizar placeholders
+                if (newCountryCode) {
+                    // Esto no funciona directamente, los placeholders de TextInput no se actualizan así.
+                    // El placeholder se pasa en la prop `placeholder` del TextInput.
+                }
+              }}
+              selectedItem={selectedCountry}
+              style={{ width: '100%' }}
+            />
+          </div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="state-province">State / Province</FormLabel>
@@ -475,12 +495,25 @@ function HotelNewForm() {
           <div style={inputContainerStyle}><TextInput id="city" labelText="" placeholder="e.g., New York" value={city} onChange={(e) => setCity(e.target.value)} style={{ width: '100%' }}/></div>
         </div>
         <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="zip-code">Zip / Postal Code</FormLabel>
+          <FormLabel style={labelStyle} htmlFor="zip-code">Zip Code / Postal Code</FormLabel>
           <div style={inputContainerStyle}><TextInput id="zip-code" labelText="" placeholder="e.g., 10001" value={zipCode} onChange={(e) => setZipCode(e.target.value)} style={{ width: '100%' }} /></div>
         </div>
         <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="main-phone-number">Main Phone Number</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="main-phone-number" type="tel" labelText="" placeholder="e.g., (555) 123-4567" value={mainPhoneNumber} onChange={(e) => setMainPhoneNumber(e.target.value)} style={{ width: '100%' }} /></div>
+          <FormLabel style={labelStyle} htmlFor="main-phone-number">Phone Number</FormLabel>
+          <div style={inputContainerStyle}>
+            <TextInput
+              id="main-phone-number"
+              type="tel"
+              labelText=""
+              placeholder={getPhonePlaceholder(selectedCountry?.code)}
+              value={mainPhoneNumberFormatted} // Mostrar siempre el formateado
+              onChange={(e) => handlePhoneNumberChange(e, selectedCountry?.code, setMainPhoneNumberRaw, setMainPhoneNumberFormatted, setMainPhoneNumberError)}
+              onBlur={() => validatePhoneNumber(mainPhoneNumberRaw, selectedCountry?.code, "Hotel Phone", setMainPhoneNumberError)}
+              invalid={!!mainPhoneNumberError}
+              invalidText={mainPhoneNumberError}
+              style={{ width: '100%' }}
+            />
+          </div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="website">Website</FormLabel>
@@ -489,37 +522,6 @@ function HotelNewForm() {
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="disclaimer">Disclaimer</FormLabel>
           <div style={inputContainerStyle}><TextInput id="disclaimer" labelText="" placeholder="Short disclaimer text" value={disclaimer} onChange={(e) => setDisclaimer(e.target.value)} style={{ width: '100%' }} /></div>
-        </div>
-        
-        {/* --- Sección System Integration --- */}
-        <h2 style={formSectionTitleStyle}>System Integration</h2>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="pms-vendor-dropdown">PMS Vendor</FormLabel>
-          <div style={inputContainerStyle}>
-            <Dropdown id="pms-vendor-dropdown" titleText="" label={loadingPms ? "Loading..." : (pmsProviderItems[0]?.text || "Select a PMS Vendor...")} items={pmsProviderItems || []} itemToString={(item) => (item ? item.text : '')} onChange={({ selectedItem }) => setSelectedPmsProvider(selectedItem && !selectedItem.id.startsWith('placeholder-') && !selectedItem.id.startsWith('loading-') && !selectedItem.id.startsWith('error-') && !selectedItem.id.startsWith('no-items-') ? selectedItem : null)} selectedItem={selectedPmsProvider} style={{ width: '100%' }} disabled={loadingPms}/>
-          </div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="pms-hotel-id">PMS Hotel ID</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="pms-hotel-id" labelText="" placeholder="ID in PMS" value={pmsHotelId} onChange={(e) => setPmsHotelId(e.target.value)} style={{ width: '100%' }}/></div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="pms-token">PMS Token</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="pms-token" labelText="" placeholder="API Token for PMS" value={pmsToken} onChange={(e) => setPmsToken(e.target.value)} type="password" style={{ width: '100%' }}/></div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="crs-vendor-dropdown">CRS Vendor</FormLabel>
-          <div style={inputContainerStyle}>
-            <Dropdown id="crs-vendor-dropdown" titleText="" label={loadingCrs ? "Loading..." : (crsProviderItems[0]?.text || "Select a CRS Vendor...")} items={crsProviderItems || []} itemToString={(item) => (item ? item.text : '')} onChange={({ selectedItem }) => setSelectedCrsProvider(selectedItem && !selectedItem.id.startsWith('placeholder-') && !selectedItem.id.startsWith('loading-') && !selectedItem.id.startsWith('error-') && !selectedItem.id.startsWith('no-items-') ? selectedItem : null)} selectedItem={selectedCrsProvider} style={{ width: '100%' }} disabled={loadingCrs}/>
-          </div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="crs-hotel-id">CRS Hotel ID</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="crs-hotel-id" labelText="" placeholder="ID in CRS" value={crsHotelId} onChange={(e) => setCrsHotelId(e.target.value)} style={{ width: '100%' }}/></div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="crs-token">CRS Token</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="crs-token" labelText="" placeholder="API Token for CRS" value={crsToken} onChange={(e) => setCrsToken(e.target.value)} type="password" style={{ width: '100%' }}/></div>
         </div>
 
         {/* --- Sección Contact Info (Main Contact) --- */}
@@ -536,77 +538,52 @@ function HotelNewForm() {
           <FormLabel style={labelStyle} htmlFor="contact-title">Title</FormLabel>
           <div style={inputContainerStyle}><TextInput id="contact-title" labelText="" placeholder="e.g., General Manager" value={contactTitle} onChange={(e) => setContactTitle(e.target.value)} style={{ width: '100%' }} /></div>
         </div>
-         <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-type-dropdown">Contact Type <span style={{color: 'red'}}>*</span></FormLabel>
+        <div style={formRowStyle}>
+          <FormLabel style={labelStyle} htmlFor="contact-mobile-phone">Phone Number</FormLabel>
           <div style={inputContainerStyle}>
-            <Dropdown id="contact-type-dropdown" titleText="" label={contactTypeItems[0]?.text || "Select contact type..."} items={contactTypeItems} itemToString={(item) => (item ? item.text : '')} onChange={({ selectedItem }) => setSelectedContactType(selectedItem.id.startsWith('placeholder-') ? null : selectedItem)} selectedItem={selectedContactType} style={{ width: '100%' }}/>
+            <TextInput
+              id="contact-mobile-phone"
+              type="tel"
+              labelText=""
+              placeholder={getPhonePlaceholder(selectedCountry?.code)}
+              value={contactMobilePhoneFormatted} // Mostrar siempre el formateado
+              onChange={(e) => handlePhoneNumberChange(e, selectedCountry?.code, setContactMobilePhoneRaw, setContactMobilePhoneFormatted, setContactMobilePhoneError)}
+              onBlur={() => validatePhoneNumber(contactMobilePhoneRaw, selectedCountry?.code, "Contact Phone", setContactMobilePhoneError)}
+              invalid={!!contactMobilePhoneError}
+              invalidText={contactMobilePhoneError}
+              style={{ width: '100%' }}
+            />
           </div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="contact-email">Email <span style={{color: 'red'}}>*</span></FormLabel>
           <div style={inputContainerStyle}>
-            <TextInput 
-              id="contact-email" 
+            <TextInput
+              id="contact-email"
               type="email"
-              labelText="" 
-              placeholder="e.g., contact@example.com" 
-              value={contactEmail} 
-              onChange={(e) => setContactEmail(e.target.value)} 
-              style={{ width: '100%' }} 
-              required 
+              labelText=""
+              placeholder="e.g., contact@example.com"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              style={{ width: '100%' }}
+              required
             />
           </div>
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-local-phone">Local Phone</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="contact-local-phone" type="tel" labelText="" placeholder="e.g., (555) 123-4560" value={contactLocalPhone} onChange={(e) => setContactLocalPhone(e.target.value)} style={{ width: '100%' }} /></div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-mobile-phone">Mobile Phone</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="contact-mobile-phone" type="tel" labelText="" placeholder="e.g., (555) 123-4561" value={contactMobilePhone} onChange={(e) => setContactMobilePhone(e.target.value)} style={{ width: '100%' }}/></div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-fax">Fax Number</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="contact-fax" type="tel" labelText="" placeholder="e.g., (555) 123-4562" value={contactFax} onChange={(e) => setContactFax(e.target.value)} style={{ width: '100%' }}/></div>
-        </div>
-        
+
         <div style={buttonContainerStyle}>
-          <Button kind="secondary" type="button" onClick={handleCancelAttempt} disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button type="submit" kind="primary" disabled={isSubmitting || loadingChains || loadingBrands || loadingPms || loadingCrs}>
+          <Button kind="secondary" type="button" onClick={handleCancelAttempt} disabled={isSubmitting}>Cancel</Button>
+          <Button type="submit" kind="primary" disabled={isSubmitting || loadingChains || loadingBrands}>
             {isSubmitting ? 'Saving...' : 'Save Hotel'}
           </Button>
         </div>
       </Form>
 
-      {/* MODAL DE CONFIRMACIÓN PARA CANCELAR */}
-      <ComposedModal
-        open={openCancelModal}
-        onClose={closeModal}
-        preventCloseOnClickOutside={false}
-        size="sm" // Tamaño del modal
-      >
-        <ModalHeader
-          title="Discard Changes?"
-          closeModal={closeModal}
-        />
-        <ModalBody>
-          <p style={{ marginBottom: '1rem' }}>
-            This action will discard ALL unsaved changes.
-          </p>
-          <p>Are you sure you want to proceed?</p>
-        </ModalBody>
-        <ModalFooter>
-          <Button kind="secondary" onClick={closeModal}>
-            No
-          </Button>
-          <Button kind="danger" onClick={proceedWithCancel}>
-            Yes, Discard
-          </Button>
-        </ModalFooter>
+      <ComposedModal open={openCancelModal} onClose={closeModal} preventCloseOnClickOutside={false} size="sm">
+        <ModalHeader title="Discard Changes?" closeModal={closeModal} />
+        <ModalBody><p style={{ marginBottom: '1rem' }}>This action will discard ALL unsaved changes.</p><p>Are you sure you want to proceed?</p></ModalBody>
+        <ModalFooter><Button kind="secondary" onClick={closeModal}>No</Button><Button kind="danger" onClick={proceedWithCancel}>Yes, Discard</Button></ModalFooter>
       </ComposedModal>
-
     </div>
   );
 }

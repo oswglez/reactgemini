@@ -1,45 +1,54 @@
 // src/components/AppLayout.jsx
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { Theme } from '@carbon/react'; // Importar Theme
-import Sidebar from './Sidebar'; // Importar el menú lateral
+import Sidebar from './Sidebar'; // El Sidebar que acabamos de definir arriba
+import { Content } from '@carbon/react';
+// Opcional: Si quieres un Header de Carbon encima del Sidebar y Content
+// import { Header, HeaderContainer, HeaderName, SkipToContent } from '@carbon/react';
 
-// Mantén tus definiciones de estilo
-const layoutContainerStyle = {
-  display: 'flex', // Para poner Sidebar y contenido lado a lado
-  minHeight: '100%',
-};
-
-// Quita el fondo púrpura de aquí, será heredado del Theme g100
-const contentStyle = {
-  flexGrow: 1, // El contenido principal ocupa el espacio restante
-  padding: '2rem', // Espaciado interno para el contenido
-  // backgroundColor: '#5331FA', // <-- ELIMINADO DE AQUÍ
-  fontFamily: 'Roboto, sans-serif', // Fuente principal
-  overflowX: 'auto',
-  // color: 'white' // Dejar que el Theme maneje el color
-};
-const outerDivStyle = {
-  backgroundColor: '#3195fa',
-  height: '100%', // Ensure this outer div takes full height
-};
 function AppLayout() {
+  console.log('AppLayout (Carbon Standard Version) renderizando...');
   return (
-    // 1. Div exterior: Aplica el fondo púrpura y ocupa toda la altura
-    <div style={outerDivStyle}>
-      {' '}
-      {/* 2. Aplicar el tema g100 DENTRO del fondo púrpura */}
-      <Theme theme="g10">
-        {/* 3. Div interior con flex layout (ya no necesita fondo) */}
-        <div style={layoutContainerStyle}>
-          <Sidebar />
-          {/* 4. Main ahora usará el fondo del tema g100 */}
-          <main style={contentStyle}>
-            <Outlet /> {/* El contenido de la ruta se renderiza aquí */}
-          </main>
-        </div>
-      </Theme>
-    </div>
+    <>
+      {/* // Opcional: Si decides añadir un Header de Carbon global
+      <HeaderContainer
+        render={({ isSideNavExpanded, onClickSideNavExpand }) => (
+          <Header aria-label="Expectra Platform Name">
+            <SkipToContent />
+            <HeaderName href="/dashboard" prefix="Expectra">
+              [AI Hotel Platform]
+            </HeaderName>
+            {/* Aquí podrías añadir más elementos al header si los necesitas *}
+          </Header>
+        )}
+      />
+      */}
+      
+      {/* Contenedor principal para Sidebar y Content */}
+      <div style={{ 
+        display: 'flex', 
+        // Si tienes un Header de Carbon fijo, necesitas ajustar la altura:
+        // height: 'calc(100vh - 48px)', // Asumiendo que el Header de Carbon mide 3rem (48px)
+        // Si no hay Header de Carbon fijo encima, puedes usar 100vh:
+        height: '100vh' 
+      }}>
+        <Sidebar /> {/* Renderiza el Sidebar de Carbon */}
+        
+        <Content // Componente Content de Carbon para el área principal
+          id="main-content"
+          style={{
+            flexGrow: 1, // Para que ocupe el espacio restante
+            // Carbon <Content> ya gestiona su propio padding, 
+            // pero puedes añadir más si es necesario.
+            // Ejemplo: padding: '1rem',
+            overflowY: 'auto', // Para scroll si el contenido es largo
+            // No es necesario backgroundColor aquí, Carbon Theme lo manejará.
+          }}
+        >
+          <Outlet /> {/* Aquí se renderizará Dashboard, HotelList, etc. */}
+        </Content>
+      </div>
+    </>
   );
 }
 

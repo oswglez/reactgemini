@@ -1,88 +1,53 @@
-// src/App.jsx (COMPLETO - con rutas protegidas)
+// src/App.jsx
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-
-// Layouts
-import AppLayout from './components/AppLayout';
-import HotelManageLayout from './components/HotelManageLayout';
-
-// Vistas/Componentes
+import { Routes, Route, Navigate } from 'react-router-dom';
+// import AppLayout from './components/AppLayout'; // Comentamos AppLayout temporalmente
+// import ProtectedRoute from './components/ProtectedRoute'; // Comentamos ProtectedRoute temporalmente
 import Dashboard from './components/Dashboard';
 import HotelList from './components/HotelList';
-import HotelForm from './components/HotelForm';
-import HotelNewForm from './components/HotelNewForm'; // <-- Import HotelNewForm
+import HotelNewForm from './components/HotelNewForm';
+import HotelEditForm from './components/HotelEditForm';
+import NotFound from './components/NotFound'; 
+import HotelManageLayout from './components/HotelManageLayout';
 import HotelDetailsView from './components/HotelDetailsView';
-import RoomForm from './components/RoomForm';
-import ContactForm from './components/ContactForm';
-import AddressForm from './components/AddressForm';
-import AmenityForm from './components/AmenityForm';
-import MediaForm from './components/MediaForm';
-import FloorPlanForm from './components/FloorPlanForm';
 import TypesManagementPage from './components/TypesManagementPage';
-
-// Placeholders Tipos (aún no funcionales)
-import AmenityTypeForm from './components/AmenityTypeForm';
-import MediaTypeForm from './components/MediaTypeForm';
-import RoomTypeForm from './components/RoomTypeForm';
-
-// Componente de Ruta Protegida
-import ProtectedRoute from './components/ProtectedRoute'; // <-- Importar
-
-// Componentes 404
-const NotFound = () => (
-  <div style={{ marginTop: '2rem' }}>
-    <h2>404 - Page Not Found</h2>
-  </div>
-);
-const HotelSubSectionNotFound = () => (
-  <div style={{ marginTop: '2rem' }}>
-    <h3>Hotel section not found</h3>
-    <p>Please select a valid option from the tabs.</p>
-  </div>
-);
 
 function App() {
   return (
     <Routes>
-      {/* Layout Principal (asumimos que el layout en sí es siempre visible) */}
-      <Route path="/" element={<AppLayout />}>
-        {/* Rutas Públicas o Comunes */}
-        <Route index element={<Dashboard />} />
-        {/* Podrías dejar el Dashboard público o protegerlo también */}
+      {/* --- RUTA DE PRUEBA DIRECTA A HOTEL LIST --- */}
+      <Route path="/" element={<HotelList />} />
 
-        {/* --- RUTAS PROTEGIDAS --- */}
-        {/* Usamos ProtectedRoute como elemento padre para un grupo de rutas */}
-        <Route element={<ProtectedRoute />}>
-          {/* Todas las rutas anidadas aquí requerirán autenticación */}
-          <Route path="hotels" element={<HotelList />} />
-          <Route path="hotel">
-            {/* Use HotelNewForm here */}
-            <Route path="new" element={<HotelNewForm />} />
-            <Route path=":hotelId" element={<HotelManageLayout />}>
-              {' '}
-              {/* Gestionar hotel */}
-              <Route index element={<HotelForm />} /> {/* Editar hotel */}
-              <Route path="rooms" element={<RoomForm />} />
-              <Route path="contacts" element={<ContactForm />} />
-              <Route path="address" element={<AddressForm />} />
-              <Route path="amenities" element={<AmenityForm />} />
-              <Route path="media" element={<MediaForm />} />
-              <Route path="floorplans" element={<FloorPlanForm />} />
-              <Route path="*" element={<HotelSubSectionNotFound />} />
-            </Route>
-            {/* Wildcard para /hotel/* inválido */}
-            <Route path="*" element={<NotFound />} />
-          </Route>
-          <Route path="types" element={<TypesManagementPage />} />{' '}
-          {/* Gestionar Tipos */}
-          {/* Podrías añadir aquí rutas protegidas para Settings si las creas */}
-          {/* <Route path="settings"> ... </Route> */}
+      {/* Ruta para crear nuevo hotel (si la necesitas sin el layout) */}
+      <Route path="/hotel/new" element={<HotelNewForm />} />
+
+      {/* RUTA PARA EDITAR HOTEL (ASEGÚRATE QUE ESTÉ ACTIVA) */}
+      <Route path="/hotel/edit/:hotelId" element={<HotelEditForm />} />
+
+      {/* Puedes añadir otras rutas que quieras probar directamente aquí también */}
+      {/* Ejemplo: <Route path="/dashboard" element={<Dashboard />} /> */}
+      {/* Ejemplo: <Route path="/types-management" element={<TypesManagementPage />} /> */}
+
+      {/* Ruta comodín para 404 */}
+      <Route path="*" element={<NotFound />} />
+
+      {/* --- RUTAS ORIGINALES (COMENTADAS O MANTENIDAS PARA DESPUÉS) --- */}
+      {/* <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+        <Route index element={<Navigate to="/app/dashboard" replace />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="hotel-list" element={<HotelList />} /> // Esta sería la ruta normal
+        <Route path="hotel/new" element={<HotelNewForm />} />
+        <Route path="hotel/edit/:hotelId" element={<HotelEditForm />} />
+        <Route path="hotel/:hotelId" element={<HotelManageLayout />}>
+          <Route index element={<HotelDetailsView />} />
         </Route>
-        {/* --- FIN RUTAS PROTEGIDAS --- */}
+        <Route path="types-management" element={<TypesManagementPage />} />
+      </Route> 
+      */}
 
-        {/* Ruta 404 Principal */}
-        <Route path="*" element={<NotFound />} />
-      </Route>
+      {/* Si quieres probar otras rutas directamente, puedes añadirlas aquí sin AppLayout */}
+      {/* <Route path="/dashboard-direct" element={<Dashboard />} /> */}
+
     </Routes>
   );
 }

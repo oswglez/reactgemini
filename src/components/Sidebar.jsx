@@ -1,116 +1,66 @@
 // src/components/Sidebar.jsx
 import React from 'react';
-import { NavLink } from 'react-router-dom'; // Usar NavLink para estilo activo
+import { Link, useLocation } from 'react-router-dom';
+import {
+  SideNav,
+  SideNavItems,
+  SideNavLink,
+  // SideNavMenu, // Descomenta si necesitas submenús
+  // SideNavMenuItem, // Descomenta si necesitas submenús
+} from '@carbon/react';
+import {
+  Home,
+  List,
+  AddAlt as CreateIcon, // Usando AddAlt para "Create"
+  Settings,
+} from '@carbon/icons-react'; // Asegúrate de tener @carbon/icons-react instalado
 
-// --- ASEGÚRATE DE TENER ESTAS DEFINICIONES DE ESTILO ---
-const sidebarStyle = {
-  width: '250px',
-  background: '#3d1fcc', // Púrpura algo más oscuro
-  padding: '1rem',
-  height: '100vh',
-  overflowY: 'auto',
-};
-
-const navListStyle = {
-  listStyle: 'none',
-  padding: 0,
-  margin: 0,
-};
-
-// Estilo base para enlaces
-const linkStyle = {
-  display: 'block',
-  color: 'white', // <--- Color blanco para el texto
-  textDecoration: 'none', // <--- Sin subrayado
-  padding: '0.75rem 1rem',
-  marginBottom: '0.5rem',
-  borderRadius: '4px',
-  transition: 'background-color 0.2s ease',
-};
-
-// Estilo para el enlace activo (usando isActive de NavLink)
-const activeStyle = {
-  backgroundColor: 'rgba(255, 255, 255, 0.2)', // Fondo blanco semitransparente
-  fontWeight: 'bold',
-};
-// --- FIN DE DEFINICIONES DE ESTILO ---
+// Define tus items de navegación
+// Asegúrate que las rutas 'to' coincidan con las definidas en App.jsx
+const navItems = [
+  { to: '/dashboard', label: 'Dashboard', icon: Home },
+  { to: '/hotel-list', label: 'Property List', icon: List },
+  { to: '/hotel/new', label: 'Create Property', icon: CreateIcon },
+  { to: '/types-management', label: 'Manage Types', icon: Settings },
+  // Agrega más items de navegación aquí si es necesario
+];
 
 function Sidebar() {
-  // --- ASEGÚRATE DE QUE EL RETURN INCLUYA EL DIV EXTERIOR ---
+  const location = useLocation();
+
   return (
-    <div style={sidebarStyle}>
-      {' '}
-      {/* <-- Este DIV aplica el fondo y tamaño */}
-      <h3
-        style={{
-          color: 'white',
-          borderBottom: '1px solid #7a60f5',
-          paddingBottom: '0.5rem',
-          marginBottom: '1rem',
-        }}
-      >
-        Hotel Management
-      </h3>
-      <nav>
-        <ul style={navListStyle}>
-          {/* Enlaces (cada NavLink usa los estilos) */}
-          <li>
-            <NavLink
-              to="/"
-              end
-              style={({ isActive }) => ({
-                ...linkStyle,
-                ...(isActive ? activeStyle : {}),
-              })}
-            >
-              Home / Dashboard
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/hotels"
-              style={({ isActive }) => ({
-                ...linkStyle,
-                ...(isActive ? activeStyle : {}),
-              })}
-            >
-              List Hotels
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/hotel/new"
-              style={({ isActive }) => ({
-                ...linkStyle,
-                ...(isActive ? activeStyle : {}),
-              })}
-            >
-              Create New Hotel
-            </NavLink>
-          </li>
-          <li
-            style={{
-              marginTop: '1.5rem',
-              paddingTop: '0.75rem',
-              borderTop: '1px solid #555',
-            }}
+    <SideNav
+      isFixedNav // Mantiene el sidebar fijo
+      expanded={true} // El sidebar estará expandido por defecto
+      isChildOfHeader={false} // Poner a true si tienes un <Header> de Carbon encima
+      aria-label="Side navigation"
+      // className="custom-sidebar-class" // Si necesitas aplicar estilos CSS adicionales
+    >
+      <SideNavItems>
+        {navItems.map((item) => (
+          <SideNavLink
+            renderIcon={item.icon}
+            as={Link} // MUY IMPORTANTE para la integración con React Router
+            to={item.to}
+            key={item.to} // Usar 'to' como key ya que es único para cada enlace
+            isActive={ // Lógica para determinar si el enlace está activo
+              location.pathname === item.to ||
+              (item.to !== "/" && item.to !== "/dashboard" && location.pathname.startsWith(item.to))
+            }
           >
-            <NavLink
-              to="/types"
-              style={({ isActive }) => ({
-                ...linkStyle,
-                ...(isActive ? activeStyle : {}),
-              })}
-            >
-              Manage Types
-            </NavLink>
-          </li>
-          {/* ... otros enlaces/placeholders ... */}
-        </ul>
-      </nav>
-    </div> // <-- Cierre del DIV exterior
+            {item.label}
+          </SideNavLink>
+        ))}
+        {/* Ejemplo de Submenú (si lo necesitas en el futuro):
+        <SideNavMenu title="Management" renderIcon={SettingsIcon}>
+          <SideNavMenuItem element={Link} to="/management/users"> {/* Usa element={Link} para subitems *}
+            User Management
+          </SideNavMenuItem>
+        </SideNavMenu>
+        */}
+      </SideNavItems>
+    </SideNav>
   );
-  // --- FIN DEL RETURN ---
 }
 
 export default Sidebar;

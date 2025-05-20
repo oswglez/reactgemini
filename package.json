@@ -13,7 +13,9 @@
     "@carbon/react": "^1.79.0",
     "@carbon/styles": "^1.78.0",
     "@react-keycloak/web": "^3.4.0",
+    "country-list": "^2.3.0",
     "keycloak-js": "^26.1.5",
+    "libphonenumber-js": "^1.12.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.6.0"
@@ -33,7 +35,7 @@
     "vite": "^6.2.0"
   },
   "overrides": {
-  "react": "^19.0.0", 
-  "react-dom": "^19.0.0"
-}
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
 }
