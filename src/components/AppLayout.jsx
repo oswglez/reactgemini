@@ -1,51 +1,43 @@
 // src/components/AppLayout.jsx
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import Sidebar from './Sidebar'; // El Sidebar que acabamos de definir arriba
+import Sidebar from './Sidebar'; // El Sidebar de Carbon definido arriba
 import { Content } from '@carbon/react';
-// Opcional: Si quieres un Header de Carbon encima del Sidebar y Content
-// import { Header, HeaderContainer, HeaderName, SkipToContent } from '@carbon/react';
+// Opcional: Si quieres un Header de Carbon global
+// import { Header, HeaderContainer, HeaderName } from '@carbon/react';
 
 function AppLayout() {
-  console.log('AppLayout (Carbon Standard Version) renderizando...');
+  // console.log('AppLayout (Carbon Standard Version) renderizando...'); // Puedes añadir este log
   return (
     <>
-      {/* // Opcional: Si decides añadir un Header de Carbon global
+      {/*
+      // EJEMPLO DE HEADER DE CARBON (OPCIONAL)
       <HeaderContainer
         render={({ isSideNavExpanded, onClickSideNavExpand }) => (
           <Header aria-label="Expectra Platform Name">
-            <SkipToContent />
             <HeaderName href="/dashboard" prefix="Expectra">
               [AI Hotel Platform]
             </HeaderName>
-            {/* Aquí podrías añadir más elementos al header si los necesitas *}
           </Header>
         )}
       />
       */}
       
-      {/* Contenedor principal para Sidebar y Content */}
       <div style={{ 
         display: 'flex', 
-        // Si tienes un Header de Carbon fijo, necesitas ajustar la altura:
-        // height: 'calc(100vh - 48px)', // Asumiendo que el Header de Carbon mide 3rem (48px)
-        // Si no hay Header de Carbon fijo encima, puedes usar 100vh:
-        height: '100vh' 
+        height: '100vh' // O 'calc(100vh - alturaDelHeader)' si usas un Header fijo
       }}>
-        <Sidebar /> {/* Renderiza el Sidebar de Carbon */}
-        
-        <Content // Componente Content de Carbon para el área principal
+        <Sidebar />
+        <Content
           id="main-content"
           style={{
-            flexGrow: 1, // Para que ocupe el espacio restante
-            // Carbon <Content> ya gestiona su propio padding, 
-            // pero puedes añadir más si es necesario.
-            // Ejemplo: padding: '1rem',
-            overflowY: 'auto', // Para scroll si el contenido es largo
-            // No es necesario backgroundColor aquí, Carbon Theme lo manejará.
+            flexGrow: 1,
+            overflowY: 'auto',
+            // Carbon <Content> gestiona su padding y tema.
+            // padding: '1rem', // Puedes añadir padding extra si lo deseas
           }}
         >
-          <Outlet /> {/* Aquí se renderizará Dashboard, HotelList, etc. */}
+          <Outlet /> 
         </Content>
       </div>
     </>
