@@ -4,36 +4,21 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Loading, InlineNotification, Button, Checkbox, Pagination, DataTable,
   TableContainer, Table, TableHead, TableRow, TableHeader, TableBody, TableCell,
+  Modal, // Importa Modal
 } from '@carbon/react';
-import { AddFilled, ArrowUp, ArrowDown } from '@carbon/icons-react';
+import { AddFilled, ArrowUp, ArrowDown, TrashCan } from '@carbon/icons-react'; // Importa TrashCan
 
-const containerStyle = { /* ... */ };
-const actionButtonStyle = { /* ... */ };
-const headerButtonContainerStyle = { /* ... */ };
-const tableTitleContainerStyle = { /* ... */ };
-containerStyle.marginTop = '1rem';
-containerStyle.width = '100%';
-containerStyle.padding = '20px';
-// containerStyle.border = '2px solid blue'; // Comentado para no mostrar el borde azul
-containerStyle.backgroundColor = '#f9f9f9';
-
-actionButtonStyle.marginRight = '0.5rem';
-
-headerButtonContainerStyle.display = 'flex';
-headerButtonContainerStyle.justifyContent = 'space-between';
-headerButtonContainerStyle.alignItems = 'center';
-headerButtonContainerStyle.marginBottom = '20px';
-
-tableTitleContainerStyle.display = 'flex';
-tableTitleContainerStyle.justifyContent = 'space-between';
-tableTitleContainerStyle.alignItems = 'center';
-tableTitleContainerStyle.marginBottom = '1rem';
-
+// ... (estilos y decodeHotelStatus sin cambios)
+const containerStyle = { marginTop: '1rem', width: '100%', padding: '20px', backgroundColor: '#f9f9f9' };
+const actionButtonStyle = { marginRight: '0.5rem' };
+const headerButtonContainerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' };
+const tableTitleContainerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' };
 
 const decodeHotelStatus = (statusKey) => {
   const statusMap = { A: 'Active', P: 'Pending', I: 'Inactive' };
   return statusMap[statusKey] || statusKey;
 };
+
 
 function HotelList() {
   const navigate = useNavigate();
@@ -47,9 +32,19 @@ function HotelList() {
   const [sortColumn, setSortColumn] = useState('hotelName');
   const [sortDirection, setSortDirection] = useState('ASC');
 
-  const fetchHotels = useCallback(async (page, size, column, direction) => { /* ... (sin cambios) ... */ 
+  // Nuevos estados para el modal de eliminación
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [hotelToDeleteId, setHotelToDeleteId] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+  const [deleteSuccess, setDeleteSuccess] = useState(null);
+
+
+  const fetchHotels = useCallback(async (page, size, column, direction) => {
     setLoading(true);
     setError(null);
+    // Limpiar mensajes de éxito/error de eliminación al recargar
+    setDeleteError(null);
+    setDeleteSuccess(null);
     try {
       let url = `http://localhost:8090/api/hotels/hotelList?page=${page}&size=${size}`;
       if (column && direction) {
@@ -77,12 +72,12 @@ function HotelList() {
     }
   }, []);
 
-  useEffect(() => { /* ... (sin cambios) ... */ 
+  useEffect(() => {
     console.log('useEffect triggered with:', { currentPage, pageSize, sortColumn, sortDirection });
     fetchHotels(currentPage, pageSize, sortColumn, sortDirection);
   }, [fetchHotels, currentPage, pageSize, sortColumn, sortDirection]);
 
-  const handleSort = useCallback((columnKey) => { /* ... (sin cambios) ... */ 
+  const handleSort = useCallback((columnKey) => {
     console.log(`handleSort (called by DataTable) for column: ${columnKey}`);
     if (sortColumn === columnKey) {
       setSortDirection(prevDirection => (prevDirection === 'ASC' ? 'DESC' : 'ASC'));
@@ -95,14 +90,14 @@ function HotelList() {
     }
   }, [sortColumn, currentPage]);
 
-  const getSortIcon = useCallback((columnKey) => { /* ... (sin cambios) ... */ 
+  const getSortIcon = useCallback((columnKey) => {
     if (sortColumn === columnKey) {
       return sortDirection === 'ASC' ? <ArrowUp size={16} /> : <ArrowDown size={16} />;
     }
     return null;
   }, [sortColumn, sortDirection]);
 
-  const dataTableHeaders = [ /* ... (sin cambios) ... */ 
+  const dataTableHeaders = [
     { key: 'select', header: '', isSortable: false, style: { width: '60px' } },
     { key: 'hotelCode', header: 'Code', isSortable: true, style: { width: '100px' } },
     { key: 'hotelChain', header: 'Chain', isSortable: true, style: { width: '120px' } },
@@ -119,7 +114,8 @@ function HotelList() {
     { key: 'hotelStatus', header: 'Status', isSortable: true, style: { width: '100px' } },
   ];
   const tableRows = hotels.map(hotel => ({ ...hotel, id: hotel.hotelId.toString() }));
-  const handlePaginationChange = ({ page, pageSize: newPageSize }) => { /* ... (sin cambios) ... */ 
+
+  const handlePaginationChange = ({ page, pageSize: newPageSize }) => {
     const newRequestedPage = page - 1;
     if (newPageSize !== pageSize) {
       setPageSize(newPageSize);
@@ -128,7 +124,8 @@ function HotelList() {
       setCurrentPage(newRequestedPage);
     }
   };
-  const handleRowCheckboxChange = (rowId) => { /* ... (sin cambios) ... */ 
+
+  const handleRowCheckboxChange = (rowId) => {
     setSelectedRows(prevSelectedRows => {
       const newSelectedRows = new Set(prevSelectedRows);
       if (newSelectedRows.has(rowId)) {
@@ -139,8 +136,10 @@ function HotelList() {
       return newSelectedRows;
     });
   };
+
   const isRowSelected = (rowId) => selectedRows.has(rowId);
-  const handleSelectAll = (event) => { /* ... (sin cambios) ... */ 
+
+  const handleSelectAll = (event) => {
     if (event.target.checked) {
       const allRowIds = new Set(tableRows.map(row => row.id));
       setSelectedRows(allRowIds);
@@ -148,34 +147,152 @@ function HotelList() {
       setSelectedRows(new Set());
     }
   };
+
   const areAllRowsSelected = tableRows.length > 0 && selectedRows.size === tableRows.length;
   const isIndeterminate = selectedRows.size > 0 && selectedRows.size < tableRows.length;
 
+
+  // --- Funciones para el borrado ---
+  const openDeleteModal = () => {
+    if (selectedRows.size === 1) {
+      const selectedId = Array.from(selectedRows)[0];
+      setHotelToDeleteId(selectedId);
+      setShowDeleteModal(true);
+      setDeleteError(null); // Limpiar error previo
+      setDeleteSuccess(null); // Limpiar éxito previo
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setHotelToDeleteId(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!hotelToDeleteId) return;
+
+    setLoading(true); // Podrías usar un estado de carga específico para la eliminación
+    setDeleteError(null);
+    setDeleteSuccess(null);
+
+    try {
+      const response = await fetch(`http://localhost:8090/api/hotels/${hotelToDeleteId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not delete property'}. Body: ${errorBody}`);
+      }
+
+      // Si la eliminación fue exitosa
+      setDeleteSuccess('Property deleted successfully.');
+      closeDeleteModal();
+      setSelectedRows(prev => { // Deseleccionar la fila eliminada
+        const newSelected = new Set(prev);
+        newSelected.delete(hotelToDeleteId);
+        return newSelected;
+      });
+      // Recargar la lista de hoteles
+      // Forzamos una recarga desde la página actual o la primera si la actual queda vacía
+      // Esta lógica puede necesitar ajustes dependiendo de cómo tu API maneje la paginación después de una eliminación
+      fetchHotels(currentPage, pageSize, sortColumn, sortDirection);
+
+    } catch (err) {
+      console.error('Error deleting hotel:', err);
+      setDeleteError(err.message || 'Could not delete property. Please try again.');
+      // No cerramos el modal en caso de error para que el usuario vea el mensaje
+    } finally {
+      // setLoading(false); // Ya se maneja en fetchHotels o podrías tener un loading específico
+    }
+  };
+  // --- Fin de funciones para el borrado ---
+
   return (
     <div style={containerStyle}>
-      {/* ... (Título y botón "Create New Property" sin cambios) ... */}
       <h2 style={{ textAlign: 'center', color: '#3751ff', marginBottom: '10px' }}>SelectVista AI Properties</h2>
       <p style={{ fontSize: '0.875rem', color: '#555', marginBottom: '20px', textAlign: 'center' }}>
         Below you will find the list of properties in the SelectVista AI platform.
         To create a new property select "Create New Property".
-        To view or edit the details of a property, select the corresponding row and click on "View Details".
+        To view or edit the details of a property, select the corresponding row and click on "View Property Details".
+        To delete a property, select a row and click "Delete Property".
       </p>
-      <div style={headerButtonContainerStyle}><div /><Link to="/hotel/new" style={{ textDecoration: 'none' }}><Button kind="primary" renderIcon={AddFilled}>Create New Property</Button></Link></div>
+      <div style={headerButtonContainerStyle}>
+        <div />
+        <Link to="/hotel/new" style={{ textDecoration: 'none' }}>
+          <Button kind="primary" renderIcon={AddFilled}>Create New Property</Button>
+        </Link>
+      </div>
       <div style={tableTitleContainerStyle}>
         <h3>List of Hotels ({totalElements})</h3>
         <div>
-          <Button kind="secondary" style={actionButtonStyle} disabled={selectedRows.size === 0}>View Property Amenities</Button>
-          <Button kind="secondary" disabled={selectedRows.size !== 1} onClick={() => {
-            if (selectedRows.size === 1) {
-              const selectedHotelId = Array.from(selectedRows)[0];
-              navigate(`/hotel/edit/${selectedHotelId}`);
-            }
-          }}>View Property Details</Button>
+          <Button
+            kind="secondary"
+            style={actionButtonStyle}
+            disabled={selectedRows.size === 0} // Habilitado si al menos una fila está seleccionada
+          >
+            View Property Amenities
+          </Button>
+          <Button
+            kind="secondary"
+            style={actionButtonStyle}
+            disabled={selectedRows.size !== 1} // Habilitado solo si una fila está seleccionada
+            onClick={() => {
+              if (selectedRows.size === 1) {
+                const selectedHotelId = Array.from(selectedRows)[0];
+                navigate(`/hotel/edit/${selectedHotelId}`);
+              }
+            }}
+          >
+            View Property Details
+          </Button>
+          {/* Botón de Eliminar */}
+          <Button
+            kind="danger" // 'danger' para acciones destructivas
+            renderIcon={TrashCan}
+            style={actionButtonStyle}
+            disabled={selectedRows.size !== 1} // Habilitado solo si UNA fila está seleccionada
+            onClick={openDeleteModal}
+          >
+            Delete Property
+          </Button>
         </div>
       </div>
 
       {loading && <Loading description="Loading hotels..." withOverlay={false} style={{ marginTop: '2rem' }} />}
-      {!loading && error && <InlineNotification kind="error" title="Error Loading List" subtitle={error} onCloseButtonClick={() => setError(null)} lowContrast />}
+      {!loading && error && (
+        <InlineNotification
+          kind="error"
+          title="Error Loading List"
+          subtitle={error}
+          onCloseButtonClick={() => setError(null)}
+          lowContrast
+          style={{ marginBottom: '1rem' }}
+        />
+      )}
+      {/* Notificación de error en eliminación */}
+      {deleteError && (
+        <InlineNotification
+          kind="error"
+          title="Deletion Failed"
+          subtitle={deleteError}
+          onCloseButtonClick={() => setDeleteError(null)}
+          lowContrast
+          style={{ marginBottom: '1rem' }}
+        />
+      )}
+      {/* Notificación de éxito en eliminación */}
+      {deleteSuccess && (
+        <InlineNotification
+          kind="success"
+          title="Success"
+          subtitle={deleteSuccess}
+          onCloseButtonClick={() => setDeleteSuccess(null)}
+          lowContrast
+          style={{ marginBottom: '1rem' }}
+        />
+      )}
+
 
       {!loading && !error && (
         <>
@@ -189,22 +306,29 @@ function HotelList() {
                     <TableHead>
                       <TableRow>
                         {dtHeaders.map((header) => {
-                          // ****** CORRECCIÓN PARA LA KEY ******
                           const { key: carbonGeneratedKey, ...restOfHeaderProps } = getHeaderProps({ header });
                           return (
                             <TableHeader
-                              key={header.key} // Usar tu key explícita para React
-                              {...restOfHeaderProps} // Propagar el resto de las props de Carbon
+                              key={header.key}
+                              {...restOfHeaderProps}
                               onClick={() => {
                                 if (header.isSortable) {
                                   handleSort(header.key);
                                 }
                               }}
-                              style={{ ...header.style, ...(restOfHeaderProps.style || {}) }} // Fusionar estilos
+                              style={{ ...header.style, ...(restOfHeaderProps.style || {}) }}
                               isSortable={header.isSortable}
                             >
-                              {header.header}
-                              {header.isSortable && (
+                              {header.header === 'select' && hotels.length > 0 ? ( // Para el checkbox de seleccionar todos
+                                <Checkbox
+                                  id="select-all-checkbox"
+                                  labelText=""
+                                  onChange={handleSelectAll}
+                                  checked={areAllRowsSelected}
+                                  indeterminate={isIndeterminate}
+                                />
+                              ) : header.header}
+                              {header.isSortable && header.header !== 'select' && (
                                 <span style={{ marginLeft: '8px' }}>{getSortIcon(header.key)}</span>
                               )}
                             </TableHeader>
@@ -214,12 +338,8 @@ function HotelList() {
                     </TableHead>
                     <TableBody>
                       {dtRows.map((row) => (
-                        <TableRow {...getRowProps({ row })} key={row.id}>
+                        <TableRow {...getRowProps({ row })} key={row.id} className={isRowSelected(row.id) ? 'cds--data-table--selected' : ''}>
                           {row.cells.map((cell) => {
-                            if (cell.info.header === 'select') { /* ... */ }
-                            if (cell.info.header === 'hotelWebsiteUrl') { /* ... */ }
-                            if (cell.info.header === 'hotelStatus') { /* ... */ }
-                            // El resto del renderizado de celdas sin cambios
                             if (cell.info.header === 'select') {
                               return (
                                 <TableCell key={cell.id}>
@@ -250,6 +370,30 @@ function HotelList() {
           {totalElements > 0 && hotels.length > 0 && <Pagination totalItems={totalElements} pageSize={pageSize} pageSizes={[10, 25, 50, 100]} page={currentPage + 1} onChange={handlePaginationChange} style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center' }} />}
         </>
       )}
+
+      {/* Modal de Confirmación de Eliminación */}
+      <Modal
+        open={showDeleteModal}
+        onRequestClose={closeDeleteModal}
+        onRequestSubmit={handleDeleteConfirm}
+        modalHeading="Confirm Deletion"
+        primaryButtonText="YES"
+        secondaryButtonText="NO"
+        danger // Indica que la acción primaria es destructiva
+      >
+        <p>You are about to delete this property. This action is irreversible. Are you sure?</p>
+         {/* Mostrar error específico de la eliminación dentro del modal si es necesario */}
+        {deleteError && (
+            <InlineNotification
+            kind="error"
+            title="Deletion Failed"
+            subtitle={deleteError}
+            hideCloseButton // Opcional: no permitir cerrar esta notificación específica
+            lowContrast
+            style={{ marginTop: '1rem', marginBottom: '0' }}
+            />
+        )}
+      </Modal>
     </div>
   );
 }

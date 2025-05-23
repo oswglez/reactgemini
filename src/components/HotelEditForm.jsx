@@ -481,7 +481,7 @@ function HotelEditForm() {
   const proceedWithCancel = () => {
     setOpenCancelModal(false);
     resetFormFieldsToOriginal(); // Opcional: resetear al estado original cargado
-    navigate('/hotel-list');
+    navigate(-1);
   };
   const closeModal = () => setOpenCancelModal(false);
 
