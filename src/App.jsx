@@ -15,6 +15,7 @@ import HotelDetailsView from './components/HotelDetailsView'; // Importar HotelD
 import RoomForm from './components/RoomForm';
 import ContactForm from './components/ContactForm';
 import AddressForm from './components/AddressForm';
+import AmenityList from './components/AmenityList';
 import AmenityForm from './components/AmenityForm';
 import MediaForm from './components/MediaForm';
 import FloorPlanForm from './components/FloorPlanForm';
@@ -51,6 +52,12 @@ function App() {
         <Route element={<ProtectedRoute />}>
           {/* Listado de Hoteles */}
           <Route path="hotel-list" element={<HotelList />} /> {/* Ruta renombrada para mayor claridad */}
+          {/* RUTAS DE AMENITIES */}
+          <Route path="/amenities-list" element={<AmenityList />} /> {/* <-- RUTA PARA LA LISTA DE AMENITIES */}
+          <Route path="/amenities/new" element={<AmenityForm />} /> {/* <-- RUTA PARA CREAR NUEVA AMENITY (reusa AmenityForm) */}
+          {/* Si necesitas una ruta de edición, la definirías aquí. Por ahora, AmenityForm se reusa */}
+          {/* <Route path="/amenities/edit/:amenityId" element={<AmenityForm isEditMode={true} />} /> */}
+
 
           {/* Rutas de Creación y Edición de Hoteles */}
           <Route path="hotel">
@@ -71,7 +78,6 @@ function App() {
               <Route path="rooms" element={<RoomForm />} />
               <Route path="contacts" element={<ContactForm />} />
               <Route path="address" element={<AddressForm />} />
-              <Route path="amenities" element={<AmenityForm />} />
               <Route path="media" element="<MediaForm />" /> {/* Revisa el tipo de componente */}
               <Route path="floorplans" element={<FloorPlanForm />} />
               

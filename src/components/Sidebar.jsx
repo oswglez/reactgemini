@@ -68,7 +68,7 @@ function Sidebar() {
           </li>
           <li>
             <NavLink
-              to="/hotel-list"
+              to="/hotel-list" //
               style={({ isActive }) => ({
                 ...linkStyle,
                 ...(isActive ? activeStyle : {}),
@@ -88,6 +88,19 @@ function Sidebar() {
               Create New Hotel
             </NavLink>
           </li>
+          {/* --- NUEVA OPCIÓN AÑADIDA: MANAGE AMENITIES --- */}
+          <li>
+            <NavLink
+              to="/amenities-list" 
+              style={({ isActive }) => ({
+                ...linkStyle,
+                ...(isActive ? activeStyle : {}),
+              })}
+            >
+              Manage Amenities
+            </NavLink>
+          </li>
+          {/* --- FIN NUEVA OPCIÓN --- */}
           <li
             style={{
               marginTop: '1.5rem',
@@ -96,7 +109,7 @@ function Sidebar() {
             }}
           >
             <NavLink
-              to="/types-management"
+              to="/types"
               style={({ isActive }) => ({
                 ...linkStyle,
                 ...(isActive ? activeStyle : {}),
