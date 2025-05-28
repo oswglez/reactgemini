@@ -17,6 +17,8 @@ import ContactForm from './components/ContactForm';
 import AddressForm from './components/AddressForm';
 import AmenityList from './components/AmenityList';
 import AmenityForm from './components/AmenityForm';
+import AmenityEditForm from './components/AmenityEditForm';
+import AmenityNewForm from './components/AmenityNewForm';
 import MediaForm from './components/MediaForm';
 import FloorPlanForm from './components/FloorPlanForm';
 import TypesManagementPage from './components/TypesManagementPage';
@@ -54,11 +56,9 @@ function App() {
           <Route path="hotel-list" element={<HotelList />} /> {/* Ruta renombrada para mayor claridad */}
           {/* RUTAS DE AMENITIES */}
           <Route path="/amenities-list" element={<AmenityList />} /> {/* <-- RUTA PARA LA LISTA DE AMENITIES */}
-          <Route path="/amenities/new" element={<AmenityForm />} /> {/* <-- RUTA PARA CREAR NUEVA AMENITY (reusa AmenityForm) */}
+          <Route path="/amenities/new" element={<AmenityNewForm />} /> {/* <-- RUTA PARA CREAR NUEVA AMENITY (reusa AmenityForm) */}
           {/* Si necesitas una ruta de edición, la definirías aquí. Por ahora, AmenityForm se reusa */}
-          {/* <Route path="/amenities/edit/:amenityId" element={<AmenityForm isEditMode={true} />} /> */}
-
-
+          { <Route path="/amenities/edit/:amenityId" element={<AmenityEditForm isEditMode={true} />} /> }
           {/* Rutas de Creación y Edición de Hoteles */}
           <Route path="hotel">
             <Route path="new" element={<HotelNewForm />} />

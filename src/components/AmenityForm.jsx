@@ -29,7 +29,7 @@ const amenityTypeItems = [
 ];
 
 function AmenityForm() {
-  const { keycloak, initialized } = useKeycloak(); // <--- Obtener keycloak
+  //const { keycloak, initialized } = useKeycloak(); // <--- Obtener keycloak
   const { hotelId } = useParams();
   const [formData, setFormData] = useState(initialAmenityState);
   const [errors, setErrors] = useState({});
@@ -115,13 +115,6 @@ function AmenityForm() {
   // --- Envío (sin cambios) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!keycloak.authenticated) {
-      // <--- Verificar autenticación antes de enviar
-      console.error('User not authenticated!');
-      setErrors((prev) => ({ ...prev, api: 'User not authenticated.' }));
-      setSubmitStatus('error');
-      return; // O redirigir a login: keycloak.login()
-    }
     setSubmitStatus(null);
     setLastSavedInfo('');
     if (!validateForm() || !hotelId) {
@@ -166,7 +159,7 @@ function AmenityForm() {
       setLoading(false);
     }
   };
-  if (!initialized) {
+/*  if (!initialized) {
     // Muestra un loader mientras Keycloak se está inicializando
     return (
       <Loading
@@ -175,7 +168,7 @@ function AmenityForm() {
       />
     );
     // O simplemente: return <div>Loading authentication...</div>;
-  } 
+  } */
   // --- Renderizado ---
   // Variable para depurar selectedItem (calculada antes del return)
   const currentSelectedItem =
