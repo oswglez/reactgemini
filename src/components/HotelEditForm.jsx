@@ -23,6 +23,10 @@ import {
   isValidPhoneNumber,
 } from 'libphonenumber-js';
 
+// Obtener la URL base de la API del ambiente actual
+const API_BASE_URL = import.meta.env.VITE_HOTEL_API_BASE_URL;
+const API_PATH = '/api';
+
 // --- Estilos (copiados de versiones anteriores, asegúrate que sean los correctos para ti) ---
 const formContainerStyle = {
   padding: '2rem', maxWidth: '960px', minWidth: '700px', margin: '2rem auto',
@@ -119,7 +123,7 @@ function HotelEditForm() {
   const fetchChainsData = useCallback(async () => {
     setLoadingChains(true);
     try {
-      const response = await fetch('http://localhost:8090/api/chain');
+      const response = await fetch(`${API_BASE_URL}${API_PATH}/chain`);
       if (!response.ok) throw new Error('Network response for chains was not ok');
       const data = await response.json();
       const chainItems = [
@@ -147,7 +151,7 @@ function HotelEditForm() {
     setLoadingBrands(true);
     setBrands([createLoadingItem('brands', 'brands')]);
     try {
-      const response = await fetch(`http://localhost:8090/api/chain/${chainId}/brands`);
+      const response = await fetch(`${API_BASE_URL}${API_PATH}/chain/${chainId}/brands`);
       if (!response.ok) throw new Error('Network response for brands was not ok');
       const data = await response.json();
       const brandItemsList = data && data.length > 0 ?
@@ -176,12 +180,12 @@ function HotelEditForm() {
       setFeedback({ type: '', message: '' });
 
       try {
-        const allChains = await fetchChainsData(); // Esperar a que las cadenas se carguen
+        const allChains = await fetchChainsData();
         if (allChains[0]?.id.startsWith('error-') || countryDropdownItems[0]?.id.startsWith('loading-')) {
           throw new Error("Failed to load initial dropdown data (chains or countries).");
         }
 
-        const hotelResponse = await fetch(`http://localhost:8090/api/hotels/${hotelId}/withRelations`); // O tu endpoint específico
+        const hotelResponse = await fetch(`${API_BASE_URL}${API_PATH}/hotels/${hotelId}/withRelations`);
         if (!hotelResponse.ok) {
           if (hotelResponse.status === 404) setIsHotelFound(false);
           const errorText = await hotelResponse.text();
@@ -422,7 +426,7 @@ function HotelEditForm() {
     console.log('Submitting Update Form Data to Backend:', JSON.stringify(payload, null, 2));
 
     try {
-      const response = await fetch(`http://localhost:8090/api/hotels/updateWithDetails/${hotelId}`, {
+      const response = await fetch(`${API_BASE_URL}${API_PATH}/hotels/updateWithDetails/${hotelId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -453,7 +457,7 @@ function HotelEditForm() {
     setIsSubmitting(true); 
     setFeedback({ type: '', message: '' });
     try {
-      const response = await fetch(`http://localhost:8090/api/hotels/${hotelId}/soft-delete`, {
+      const response = await fetch(`${API_BASE_URL}${API_PATH}/hotels/${hotelId}/soft-delete`, {
         method: 'PUT',
       });
       if (!response.ok) {
