@@ -1,6 +1,6 @@
 // src/App.jsx (Configuración Reconciliada y Corregida)
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom'; // Importar Navigate
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Layouts
 import AppLayout from './components/AppLayout';
@@ -10,8 +10,8 @@ import HotelManageLayout from './components/HotelManageLayout';
 import Dashboard from './components/Dashboard';
 import HotelList from './components/HotelList';
 import HotelNewForm from './components/HotelNewForm';
-import HotelEditForm from './components/HotelEditForm'; // Importar HotelEditForm
-import HotelDetailsView from './components/HotelDetailsView'; // Importar HotelDetailsView
+import HotelEditForm from './components/HotelEditForm';
+import HotelDetailsView from './components/HotelDetailsView';
 import RoomForm from './components/RoomForm';
 import ContactForm from './components/ContactForm';
 import AddressForm from './components/AddressForm';
@@ -22,9 +22,12 @@ import AmenityNewForm from './components/AmenityNewForm';
 import MediaForm from './components/MediaForm';
 import FloorPlanForm from './components/FloorPlanForm';
 import TypesManagementPage from './components/TypesManagementPage';
-
-// Componente de Ruta Protegida
-import ProtectedRoute from './components/ProtectedRoute';
+import MediaTypeList from './components/types/MediaTypeList';
+import MediaTypeForm from './components/types/MediaTypeForm';
+import AmenityTypeList from './components/types/AmenityTypeList';
+import AmenityTypeForm from './components/types/AmenityTypeForm';
+import RoomTypeList from './components/types/RoomTypeList';
+import RoomTypeForm from './components/types/RoomTypeForm';
 
 // Componentes 404
 const NotFound = () => (
@@ -33,6 +36,7 @@ const NotFound = () => (
     <p>Sorry, the page you are looking for does not exist.</p>
   </div>
 );
+
 const HotelSubSectionNotFound = () => (
   <div style={{ marginTop: '2rem' }}>
     <h3>Hotel section not found</h3>
@@ -44,60 +48,54 @@ function App() {
   return (
     <Routes>
       {/* Layout Principal - AppLayout */}
-      {/* Si Dashboard debe ser público, AppLayout no debe estar dentro de ProtectedRoute en esta capa. */}
       <Route path="/" element={<AppLayout />}>
-        {/* Ruta Raíz Pública: Dashboard */}
+        {/* Ruta Raíz: Dashboard */}
         <Route index element={<Dashboard />} />
 
-        {/* --- RUTAS PROTEGIDAS --- */}
-        {/* Un <Route element={<ProtectedRoute />} /> anida todas las rutas que requieren autenticación */}
-        <Route element={<ProtectedRoute />}>
-          {/* Listado de Hoteles */}
-          <Route path="hotel-list" element={<HotelList />} /> {/* Ruta renombrada para mayor claridad */}
-          {/* RUTAS DE AMENITIES */}
-          <Route path="/amenities-list" element={<AmenityList />} /> {/* <-- RUTA PARA LA LISTA DE AMENITIES */}
-          <Route path="/amenities/new" element={<AmenityNewForm />} /> {/* <-- RUTA PARA CREAR NUEVA AMENITY (reusa AmenityForm) */}
-          {/* Si necesitas una ruta de edición, la definirías aquí. Por ahora, AmenityForm se reusa */}
-          { <Route path="/amenities/edit/:amenityId" element={<AmenityEditForm isEditMode={true} />} /> }
-          {/* Rutas de Creación y Edición de Hoteles */}
-          <Route path="hotel">
-            <Route path="new" element={<HotelNewForm />} />
-            
-            {/* IMPORTANTE: La ruta específica de edición debe ir ANTES de la ruta general de gestión de hotel.
-              Esto asegura que `/hotel/edit/:hotelId` sea capturada por `HotelEditForm`
-              y no por `HotelManageLayout` (que es más general).
-            */}
-            <Route path="edit/:hotelId" element={<HotelEditForm />} /> {/* <--- RUTA ESPECÍFICA PARA LA EDICIÓN */}
+        {/* Redirección de /types a /types-management */}
+        <Route path="types" element={<Navigate to="/types-management" replace />} />
 
-            {/* Rutas de Gestión de un Hotel Específico (anidadas bajo /hotel/:hotelId) */}
-            <Route path=":hotelId" element={<HotelManageLayout />}>
-              {/* Ruta índice para /hotel/:hotelId debe mostrar los detalles */}
-              <Route index element={<HotelDetailsView />} /> {/* <--- CORREGIDO: Muestra los detalles del hotel */}
-              
-              {/* Sub-rutas específicas para la gestión de un hotel */}
-              <Route path="rooms" element={<RoomForm />} />
-              <Route path="contacts" element={<ContactForm />} />
-              <Route path="address" element={<AddressForm />} />
-              <Route path="media" element="<MediaForm />" /> {/* Revisa el tipo de componente */}
-              <Route path="floorplans" element={<FloorPlanForm />} />
-              
-              {/* Wildcard para sub-secciones no encontradas del hotel */}
-              <Route path="*" element={<HotelSubSectionNotFound />} />
-            </Route>
+        {/* Gestión de Tipos - Movido arriba para priorizar el matching */}
+        <Route path="types-management" element={<TypesManagementPage />} />
+        
+        {/* Types Management Routes */}
+        <Route path="types/media" element={<MediaTypeList />} />
+        <Route path="types/media/new" element={<MediaTypeForm />} />
+        <Route path="types/media/edit/:id" element={<MediaTypeForm />} />
+        
+        <Route path="types/amenity" element={<AmenityTypeList />} />
+        <Route path="types/amenity/new" element={<AmenityTypeForm />} />
+        <Route path="types/amenity/edit/:id" element={<AmenityTypeForm />} />
+        
+        <Route path="types/room" element={<RoomTypeList />} />
+        <Route path="types/room/new" element={<RoomTypeForm />} />
+        <Route path="types/room/edit/:id" element={<RoomTypeForm />} />
 
-            {/* Wildcard para rutas /hotel/* no válidas (ej. /hotel/xyz que no es :hotelId ni "new") */}
-            <Route path="*" element={<NotFound />} />
+        {/* Listado de Hoteles */}
+        <Route path="hotel-list" element={<HotelList />} />
+
+        {/* RUTAS DE AMENITIES */}
+        <Route path="amenities-list" element={<AmenityList />} />
+        <Route path="amenities/new" element={<AmenityNewForm />} />
+        <Route path="amenities/edit/:amenityId" element={<AmenityEditForm />} />
+
+        {/* Rutas de Creación y Edición de Hoteles */}
+        <Route path="hotel">
+          <Route path="new" element={<HotelNewForm />} />
+          <Route path="edit/:hotelId" element={<HotelEditForm />} />
+          <Route path=":hotelId" element={<HotelManageLayout />}>
+            <Route index element={<HotelDetailsView />} />
+            <Route path="rooms" element={<RoomForm />} />
+            <Route path="contacts" element={<ContactForm />} />
+            <Route path="address" element={<AddressForm />} />
+            <Route path="media" element={<MediaForm />} />
+            <Route path="floorplans" element={<FloorPlanForm />} />
+            <Route path="*" element={<HotelSubSectionNotFound />} />
           </Route>
-
-          {/* Gestión de Tipos (Amenity, Media, Room Types) */}
-          <Route path="types-management" element={<TypesManagementPage />} /> {/* Ruta renombrada para mayor claridad */}
-
-          {/* Puedes añadir aquí otras rutas protegidas de nivel superior si las tienes */}
-          {/* <Route path="admin-settings" element={<AdminSettingsPage />} /> */}
+          <Route path="*" element={<NotFound />} />
         </Route>
-        {/* --- FIN RUTAS PROTEGIDAS --- */}
 
-        {/* Ruta 404 para cualquier otra URL no capturada por las rutas anteriores */}
+        {/* Ruta 404 para cualquier otra URL no capturada */}
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

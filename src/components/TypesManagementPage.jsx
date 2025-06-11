@@ -1,90 +1,102 @@
 // src/components/TypesManagementPage.jsx
-import React, { useState } from 'react';
-// Importar Dropdown
-import { Dropdown, Grid, Column } from '@carbon/react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Grid, Column, Tile } from '@carbon/react';
+import { 
+  Image, 
+  Category, 
+  Hotel 
+} from '@carbon/icons-react';
 
-// Importar los componentes placeholder
-import AmenityTypeForm from './AmenityTypeForm';
-import MediaTypeForm from './MediaTypeForm';
-import RoomTypeForm from './RoomTypeForm';
+const containerStyle = {
+  marginTop: '1rem',
+  width: '100%',
+  padding: '40px',
+  backgroundColor: '#f9f9f9',
+};
 
-// Opciones para el Dropdown de categoría
-const typeCategories = [
-  // Usar 'id' corto para el estado, 'text' para mostrar al usuario
-  { id: 'amenity', text: 'Amenity Types' },
-  { id: 'media', text: 'Media Types' },
-  { id: 'room', text: 'Room Types' },
-];
+const tileStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '2rem',
+  cursor: 'pointer',
+  transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+  height: '100%',
+  textAlign: 'center',
+};
+
+const iconStyle = {
+  marginBottom: '1rem',
+  width: '48px',
+  height: '48px',
+};
+
+const titleStyle = {
+  fontSize: '1.25rem',
+  fontWeight: '600',
+  marginBottom: '1rem',
+  color: '#161616',
+};
+
+const descriptionStyle = {
+  fontSize: '0.875rem',
+  color: '#525252',
+  lineHeight: '1.5',
+};
 
 function TypesManagementPage() {
-  // Estado para saber qué categoría está seleccionada
-  const [selectedCategory, setSelectedCategory] = useState(null); // null, 'amenity', 'media', 'room'
+  const navigate = useNavigate();
 
-  // Función que decide qué componente mostrar basado en la categoría
-  const renderManagementComponent = () => {
-    switch (selectedCategory) {
-      case 'amenity':
-        return <AmenityTypeForm />;
-      case 'media':
-        return <MediaTypeForm />;
-      case 'room':
-        return <RoomTypeForm />;
-      default:
-        // Mensaje si no hay nada seleccionado (se verá menos porque el dropdown tendrá placeholder)
-        return (
-          <p style={{ color: '#6f6f6f', marginTop: '1rem' }}>
-            Select a category from the dropdown above.
-          </p>
-        );
+  const typeCards = [
+    {
+      title: 'Media Types',
+      description: 'Manage different types of media content such as images, videos, and documents.',
+      icon: Image,
+      path: '/types/media'
+    },
+    {
+      title: 'Amenity Types',
+      description: 'Manage categories of amenities available in properties.',
+      icon: Category,
+      path: '/types/amenity'
+    },
+    {
+      title: 'Room Types',
+      description: 'Manage different types of rooms and accommodations.',
+      icon: Hotel,
+      path: '/types/room'
     }
-  };
-
-  // Handler para el cambio en el Dropdown
-  const handleCategoryChange = ({ selectedItem }) => {
-    setSelectedCategory(selectedItem ? selectedItem.id : null);
-  };
+  ];
 
   return (
-    <div>
-      <h2>Manage Reference Types</h2>
-      <p style={{ color: '#aeaeae', marginBottom: '1.5rem' }}>
-        Select the category of global types you want to manage.
+    <div style={containerStyle}>
+      <h2 style={{ textAlign: 'center', color: '#3751ff', marginBottom: '10px' }}>Types Management</h2>
+      <p style={{ fontSize: '0.875rem', color: '#555', marginBottom: '40px', textAlign: 'center' }}>
+        Select a category to manage different types of content and features in the system.
       </p>
 
-      {/* Usar Grid para alinear el Dropdown */}
       <Grid>
-        <Column lg={6} md={4} sm={4}>
-          {' '}
-          {/* Ajusta el ancho según necesites */}
-          {/* --- Dropdown para seleccionar categoría --- */}
-          <Dropdown
-            id="type-category-selector"
-            // Etiqueta principal que pediste
-            titleText="Select type category"
-            // Placeholder dentro del campo
-            label="Choose a category..."
-            items={typeCategories} // Las opciones definidas arriba
-            itemToString={(item) => (item ? item.text : '')}
-            // Llama a handleCategoryChange al seleccionar
-            onChange={handleCategoryChange}
-            // Determina qué item mostrar como seleccionado basado en el estado
-            selectedItem={
-              typeCategories.find((item) => item.id === selectedCategory) ||
-              null
-            }
-            light // Asumiendo tema g10 heredado
-          />
-          {/* ----------------------------------------- */}
-        </Column>
+        {typeCards.map((card, index) => (
+          <Column key={index} lg={5} md={4} sm={4} style={{ marginBottom: '2rem' }}>
+            <Tile
+              style={{
+                ...tileStyle,
+                ':hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                },
+              }}
+              onClick={() => navigate(card.path)}
+            >
+              <card.icon size={32} style={iconStyle} />
+              <h3 style={titleStyle}>{card.title}</h3>
+              <p style={descriptionStyle}>{card.description}</p>
+            </Tile>
+          </Column>
+        ))}
       </Grid>
-
-      {/* Línea separadora */}
-      <hr
-        style={{ border: 0, borderTop: '1px solid #555', margin: '2rem 0' }}
-      />
-
-      {/* Área donde se muestra el componente de gestión para la categoría seleccionada */}
-      <div>{renderManagementComponent()}</div>
     </div>
   );
 }

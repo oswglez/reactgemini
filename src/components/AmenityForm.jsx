@@ -13,6 +13,7 @@ import {
   InlineNotification,
   Loading,
 } from '@carbon/react';
+import { Add, TrashCan } from '@carbon/icons-react';
 
 // Estado inicial usando nombres en inglés
 const initialAmenityState = {
@@ -29,7 +30,6 @@ const amenityTypeItems = [
 ];
 
 function AmenityForm() {
-  //const { keycloak, initialized } = useKeycloak(); // <--- Obtener keycloak
   const { hotelId } = useParams();
   const [formData, setFormData] = useState(initialAmenityState);
   const [errors, setErrors] = useState({});
@@ -118,7 +118,7 @@ function AmenityForm() {
     setSubmitStatus(null);
     setLastSavedInfo('');
     if (!validateForm() || !hotelId) {
-      /*...*/ return;
+      return;
     }
     setLoading(true);
     const payload = {
@@ -126,26 +126,27 @@ function AmenityForm() {
       amenityType: formData.type,
       amenityDescription: formData.description,
     };
-    const apiUrl = `http://localhost:8090/api/amenities?hotelId=${hotelId}`;
-    console.log(
-      `Sending Payload to ${apiUrl}:`,
-      JSON.stringify(payload, null, 2)
-    );
-    const refreshed = await keycloak.updateToken(5);
-    console.log(refreshed ? 'Token refreshed' : 'Token still valid');
+    const apiUrl = `${import.meta.env.VITE_HOTEL_API_BASE_URL}/api/amenities?hotelId=${hotelId}`;
+    console.log(`Sending Payload to ${apiUrl}:`, JSON.stringify(payload, null, 2));
+
     try {
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // --- AÑADIR TOKEN DE AUTORIZACIÓN ---
-          Authorization: `Bearer ${keycloak.token}`,
-          // ------------------------------------
         },
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
-        /* ... error handling ... */
+        let errorMsg = `HTTP Error: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.message || JSON.stringify(errorData);
+        } catch (err) {
+          console.warn('Failed to parse error response as JSON:', err);
+          errorMsg += ` - ${response.statusText}`;
+        }
+        throw new Error(errorMsg);
       }
       const savedAmenity = await response.json();
       console.log('Amenity saved:', savedAmenity);
@@ -154,21 +155,17 @@ function AmenityForm() {
       setFormData(initialAmenityState);
       setErrors({});
     } catch (error) {
-      console.log('Error:  ' + ' ' + error.message);
+      console.error('Error saving amenity:', error);
+      setSubmitStatus('error');
+      setErrors((prev) => ({
+        ...prev,
+        api: error.message || 'An unexpected error occurred while saving the amenity.',
+      }));
     } finally {
       setLoading(false);
     }
   };
-/*  if (!initialized) {
-    // Muestra un loader mientras Keycloak se está inicializando
-    return (
-      <Loading
-        description="Initializing security context..."
-        withOverlay={false}
-      />
-    );
-    // O simplemente: return <div>Loading authentication...</div>;
-  } */
+
   // --- Renderizado ---
   // Variable para depurar selectedItem (calculada antes del return)
   const currentSelectedItem =

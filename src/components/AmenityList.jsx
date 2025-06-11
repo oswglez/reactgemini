@@ -7,6 +7,7 @@ import {
   Modal,
 } from '@carbon/react';
 import { AddFilled, ArrowUp, ArrowDown, TrashCan, Edit } from '@carbon/icons-react';
+import { getEnvironmentConfig } from '../public/env.config';
 
 // Estilos (similares a HotelList, ajusta si es necesario)
 const containerStyle = { marginTop: '1rem', width: '100%', padding: '20px', backgroundColor: '#f9f9f9' };
@@ -23,7 +24,7 @@ function AmenityList() {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
   const [totalElements, setTotalElements] = useState(0);
-  const [sortColumn, setSortColumn] = useState('amenityCode'); // Default sort by amenityCode
+  const [sortColumn, setSortColumn] = useState('amenityCode');
   const [sortDirection, setSortDirection] = useState('ASC');
 
   // Estados para el modal de eliminación
@@ -32,15 +33,20 @@ function AmenityList() {
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(null);
 
+  // Obtener la configuración del ambiente actual
+  const env = import.meta.env.MODE || 'development';
+  const config = getEnvironmentConfig(env);
+  const API_BASE_URL = config.VITE_HOTEL_API_BASE_URL;
+
   // --- Fetch Amenities ---
   const fetchAmenities = useCallback(async (page, size, column, direction) => {
     setLoading(true);
     setError(null);
-    setDeleteError(null); // Clear delete messages on new fetch
+    setDeleteError(null);
     setDeleteSuccess(null);
 
     try {
-      let url = `http://localhost:8090/api/amenities?page=${page}&size=${size}`;
+      let url = `${API_BASE_URL}/api/amenities?page=${page}&size=${size}`;
       if (column && direction) {
         url += `&sort=${column},${direction.toLowerCase()}`;
       }
@@ -53,14 +59,12 @@ function AmenityList() {
       const data = await response.json();
       console.log('Data received from API:', data);
 
-      // Map API response to table rows
-      // Assuming API returns objects like { amenityId, amenityCode, amenityDescription, amenityType, ... }
       const mappedAmenities = (data.content || []).map(amenity => ({
-        id: amenity.amenityId.toString(), // Unique ID for DataTable row key
-        amenityId: amenity.amenityId, // Actual ID for API calls (e.g., delete)
-        amenityCode: amenity.amenityCode, // Code (string or number, display as string)
-        amenityDescription: amenity.amenityDescription, // Description
-        amenityType: amenity.amenityType, // Type
+        id: amenity.amenityId.toString(),
+        amenityId: amenity.amenityId,
+        amenityCode: amenity.amenityCode,
+        amenityDescription: amenity.amenityDescription,
+        amenityType: amenity.amenityType,
       }));
 
       setAmenities(mappedAmenities);
@@ -75,7 +79,7 @@ function AmenityList() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [API_BASE_URL]);
 
   useEffect(() => {
     console.log('useEffect triggered with:', { currentPage, pageSize, sortColumn, sortDirection });
@@ -84,7 +88,6 @@ function AmenityList() {
 
   // --- Sort Handlers ---
   const handleSort = useCallback((columnKey) => {
-    console.log(`handleSort (called by DataTable) for column: ${columnKey}`);
     if (sortColumn === columnKey) {
       setSortDirection(prevDirection => (prevDirection === 'ASC' ? 'DESC' : 'ASC'));
     } else {
@@ -92,7 +95,7 @@ function AmenityList() {
       setSortDirection('ASC');
     }
     if (currentPage !== 0) {
-      setCurrentPage(0); // Reset to first page on sort
+      setCurrentPage(0);
     }
   }, [sortColumn, currentPage]);
 
@@ -110,15 +113,15 @@ function AmenityList() {
     { key: 'amenityDescription', header: 'Description', isSortable: true, style: { width: 'auto' } },
     { key: 'amenityType', header: 'Type', isSortable: true, style: { width: '150px' } },
   ];
-  // Rows are already mapped in fetchAmenities, ensure 'id' field is present for DataTable
-  const tableRows = amenities; // amenities state already contains 'id' field
+
+  const tableRows = amenities;
 
   // --- Pagination Handlers ---
   const handlePaginationChange = ({ page, pageSize: newPageSize }) => {
-    const newRequestedPage = page - 1; // Carbon's Pagination is 1-indexed, state is 0-indexed
+    const newRequestedPage = page - 1;
     if (newPageSize !== pageSize) {
       setPageSize(newPageSize);
-      setCurrentPage(0); // Reset to page 0 when page size changes
+      setCurrentPage(0);
     } else if (newRequestedPage !== currentPage) {
       setCurrentPage(newRequestedPage);
     }
@@ -172,13 +175,12 @@ function AmenityList() {
   const handleDeleteConfirm = async () => {
     if (!amenityToDeleteId) return;
 
-    setLoading(true); // Indicate loading during deletion
+    setLoading(true);
     setDeleteError(null);
     setDeleteSuccess(null);
 
     try {
-      // Assuming DELETE endpoint for amenity is /api/amenities/{id}
-      const response = await fetch(`http://localhost:8090/api/amenities/${amenityToDeleteId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/amenities/${amenityToDeleteId}`, {
         method: 'DELETE',
       });
 
@@ -189,29 +191,34 @@ function AmenityList() {
 
       setDeleteSuccess('Amenity deleted successfully.');
       closeDeleteModal();
-      setSelectedRows(new Set()); // Clear selection after deletion
-      // Re-fetch amenities from the current page to ensure list is up-to-date
+      setSelectedRows(new Set());
       fetchAmenities(currentPage, pageSize, sortColumn, sortDirection);
 
     } catch (err) {
       console.error('Error deleting amenity:', err);
       setDeleteError(err.message || 'Could not delete amenity. Please try again.');
     } finally {
-      // Loading state is handled by fetchAmenities
+      setLoading(false);
     }
   };
 
   return (
     <div style={containerStyle}>
-      <h2 style={{ textAlign: 'center', color: '#3751ff', marginBottom: '10px' }}>Manage Amenities</h2>
+      <h2 style={{ textAlign: 'center', color: '#3751ff', marginBottom: '10px' }}>
+        Manage Amenities ({env.toUpperCase()} Environment)
+      </h2>
       <p style={{ fontSize: '0.875rem', color: '#555', marginBottom: '20px', textAlign: 'center' }}>
         View and manage all amenities available in the system.
         You can create new amenities, view/edit existing ones, or delete them.
       </p>
 
       <div style={headerButtonContainerStyle}>
-        <div /> {/* Empty div for spacing */}
-        <Link to="/amenities/new" style={{ textDecoration: 'none' }}> {/* Route for creating new amenity */}
+        <div>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: '#666' }}>
+            API URL: {API_BASE_URL}
+          </p>
+        </div>
+        <Link to="/amenities/new" style={{ textDecoration: 'none' }}>
           <Button kind="primary" renderIcon={AddFilled}>Create New Amenity</Button>
         </Link>
       </div>
@@ -223,12 +230,11 @@ function AmenityList() {
             kind="secondary"
             renderIcon={Edit}
             style={actionButtonStyle}
-            disabled={selectedRows.size !== 1} // Enabled only if one row is selected
+            disabled={selectedRows.size !== 1}
             onClick={() => {
               if (selectedRows.size === 1) {
                 const selectedAmenity = amenities.find(a => a.id === Array.from(selectedRows)[0]);
-                // Assuming you want to navigate to an edit form for amenities
-                navigate(`/amenities/edit/${selectedAmenity.amenityId}`); // Route for editing amenity
+                navigate(`/amenities/edit/${selectedAmenity.amenityId}`);
               }
             }}
           >
@@ -238,7 +244,7 @@ function AmenityList() {
             kind="danger"
             renderIcon={TrashCan}
             style={actionButtonStyle}
-            disabled={selectedRows.size !== 1} // Enabled only if ONE row is selected
+            disabled={selectedRows.size !== 1}
             onClick={openDeleteModal}
           >
             Delete Amenity
@@ -284,13 +290,13 @@ function AmenityList() {
             <p style={{ textAlign: 'center', marginTop: '2rem' }}>No amenities registered yet.</p>
           ) : (
             <DataTable rows={tableRows} headers={dataTableHeaders} isSortable>
-              {({ rows: dtRows, headers: dtHeaders, getHeaderProps, getRowProps, getTableProps }) => (
+              {({ rows, headers, getHeaderProps, getRowProps, getTableProps }) => (
                 <TableContainer>
                   <Table {...getTableProps()} size="md" useZebraStyles={false}>
                     <TableHead>
                       <TableRow>
-                        {dtHeaders.map((header) => {
-                          const { key: carbonGeneratedKey, ...restOfHeaderProps } = getHeaderProps({ header });
+                        {headers.map((header) => {
+                          const { key, ...restOfHeaderProps } = getHeaderProps({ header });
                           return (
                             <TableHeader
                               key={header.key}
@@ -303,7 +309,7 @@ function AmenityList() {
                               style={{ ...header.style, ...(restOfHeaderProps.style || {}) }}
                               isSortable={header.isSortable}
                             >
-                              {header.header === 'select' && amenities.length > 0 ? (
+                              {header.header === '' && amenities.length > 0 ? (
                                 <Checkbox
                                   id="select-all-checkbox"
                                   labelText=""
@@ -312,7 +318,7 @@ function AmenityList() {
                                   indeterminate={isIndeterminate}
                                 />
                               ) : header.header}
-                              {header.isSortable && header.header !== 'select' && (
+                              {header.isSortable && header.header !== '' && (
                                 <span style={{ marginLeft: '8px' }}>{getSortIcon(header.key)}</span>
                               )}
                             </TableHeader>
@@ -321,18 +327,26 @@ function AmenityList() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {dtRows.map((row) => (
+                      {rows.map((row) => (
                         <TableRow {...getRowProps({ row })} key={row.id} className={isRowSelected(row.id) ? 'cds--data-table--selected' : ''}>
                           {row.cells.map((cell) => {
                             if (cell.info.header === 'select') {
                               return (
                                 <TableCell key={cell.id}>
-                                  <Checkbox id={`checkbox-${row.id}`} labelText="" onChange={() => handleRowCheckboxChange(row.id)} checked={isRowSelected(row.id)} />
+                                  <Checkbox
+                                    id={`checkbox-${row.id}`}
+                                    labelText=""
+                                    onChange={() => handleRowCheckboxChange(row.id)}
+                                    checked={isRowSelected(row.id)}
+                                  />
                                 </TableCell>
                               );
                             }
-                            // Render other cells based on their key
-                            return (<TableCell key={cell.id}>{cell.value !== null && cell.value !== undefined ? cell.value.toString() : 'N/A'}</TableCell>);
+                            return (
+                              <TableCell key={cell.id}>
+                                {cell.value !== null && cell.value !== undefined ? cell.value.toString() : 'N/A'}
+                              </TableCell>
+                            );
                           })}
                         </TableRow>
                       ))}
@@ -355,7 +369,6 @@ function AmenityList() {
         </>
       )}
 
-      {/* Modal de Confirmación de Eliminación */}
       <Modal
         open={showDeleteModal}
         onRequestClose={closeDeleteModal}
@@ -367,14 +380,14 @@ function AmenityList() {
       >
         <p>You are about to delete this amenity. This action is irreversible. Are you sure?</p>
         {deleteError && (
-            <InlineNotification
+          <InlineNotification
             kind="error"
             title="Deletion Failed"
             subtitle={deleteError}
             hideCloseButton
             lowContrast
             style={{ marginTop: '1rem', marginBottom: '0' }}
-            />
+          />
         )}
       </Modal>
     </div>

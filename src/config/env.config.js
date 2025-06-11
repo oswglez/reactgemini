@@ -4,6 +4,11 @@ export const environments = {
     VITE_API_URL: 'http://localhost:5173',
     VITE_HOTEL_API_BASE_URL: 'http://localhost:8090'
   },
+  ngrok: {
+    VITE_APP_TITLE: 'React Gemini App (Ngrok)',
+    VITE_API_URL: 'http://localhost:5173',
+    VITE_HOTEL_API_BASE_URL: 'https://4bd2-2800-a4-1554-3a00-69b8-88cc-c6e5-bd0d.ngrok-free.app'
+  },
   test: {
     VITE_APP_TITLE: 'React Gemini App (Test)',
     VITE_API_URL: 'http://localhost:8180',

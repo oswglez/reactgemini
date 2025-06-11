@@ -1,0 +1,248 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Form,
+  TextInput,
+  Button,
+  Modal,
+  InlineNotification,
+  Loading,
+  Grid,
+  Column,
+  Stack,
+} from '@carbon/react';
+import { Save, Close } from '@carbon/icons-react';
+
+// Styles
+const containerStyle = {
+  marginTop: '1rem',
+  width: '100%',
+  padding: '40px',
+  backgroundColor: '#f9f9f9',
+};
+const formStyle = {
+  backgroundColor: '#fff',
+  padding: '30px',
+  borderRadius: '8px',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+};
+const buttonContainerStyle = {
+  marginTop: '2rem',
+  display: 'flex',
+  justifyContent: 'flex-end',
+};
+const actionButtonStyle = {
+  marginLeft: '0.5rem',
+};
+
+function RoomTypeForm() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const isEditMode = !!id;
+
+  const [roomType, setRoomType] = useState({
+    roomTypeName: '',
+    roomTypeDescription: ''
+  });
+  const [initialRoomType, setInitialRoomType] = useState(null);
+  const [loading, setLoading] = useState(isEditMode);
+  const [error, setError] = useState(null);
+  const [saveSuccess, setSaveSuccess] = useState(null);
+  const [saveError, setSaveError] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    if (isEditMode) {
+      const fetchRoomType = async () => {
+        try {
+          const response = await fetch(`http://localhost:8090/api/roomType/${id}`);
+          if (!response.ok) {
+            throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch room type'}`);
+          }
+          const data = await response.json();
+          setRoomType(data);
+          setInitialRoomType(data);
+        } catch (err) {
+          setError(err.message || 'Could not load room type details.');
+          console.error('Error fetching room type:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchRoomType();
+    }
+  }, [id, isEditMode]);
+
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    setRoomType(prev => {
+      const updated = { ...prev, [id]: value };
+      setHasChanges(JSON.stringify(updated) !== JSON.stringify(initialRoomType));
+      return updated;
+    });
+    setSaveError(null);
+    setSaveSuccess(null);
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+
+    try {
+      const url = isEditMode
+        ? `http://localhost:8090/api/roomType/${id}`
+        : 'http://localhost:8090/api/roomType';
+      
+      const response = await fetch(url, {
+        method: isEditMode ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(roomType),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`HTTP Error ${response.status}: ${errorBody || 'Could not save room type'}`);
+      }
+
+      const savedType = await response.json();
+      setSaveSuccess('Room type saved successfully!');
+      setInitialRoomType(savedType);
+      setRoomType(savedType);
+      setHasChanges(false);
+
+      // Navigate back after successful save
+      setTimeout(() => {
+        navigate('/types/room');
+      }, 1500);
+
+    } catch (err) {
+      console.error('Error saving room type:', err);
+      setSaveError(err.message || 'Could not save room type. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelClick = () => {
+    if (hasChanges) {
+      setShowCancelModal(true);
+    } else {
+      navigate('/types/room');
+    }
+  };
+
+  if (loading) {
+    return <Loading description="Loading room type details..." withOverlay={false} />;
+  }
+
+  return (
+    <div style={containerStyle}>
+      <Grid>
+        <Column lg={16} md={8} sm={4}>
+          <h2 style={{ textAlign: 'center', color: '#3751ff', marginBottom: '20px' }}>
+            {isEditMode ? 'Edit Room Type' : 'Create New Room Type'}
+          </h2>
+
+          {error && (
+            <InlineNotification
+              kind="error"
+              title="Error"
+              subtitle={error}
+              onCloseButtonClick={() => setError(null)}
+              lowContrast
+              style={{ marginBottom: '1rem' }}
+            />
+          )}
+
+          <Form onSubmit={handleSave} style={formStyle}>
+            <Stack gap={7}>
+              <TextInput
+                id="roomTypeName"
+                labelText="Name"
+                value={roomType.roomTypeName || ''}
+                onChange={handleChange}
+                invalid={!roomType.roomTypeName}
+                invalidText="Name is required"
+                disabled={isSaving}
+                required
+              />
+
+              <TextInput
+                id="roomTypeDescription"
+                labelText="Description"
+                value={roomType.roomTypeDescription || ''}
+                onChange={handleChange}
+                invalid={!roomType.roomTypeDescription}
+                invalidText="Description is required"
+                disabled={isSaving}
+                required
+              />
+
+              {saveError && (
+                <InlineNotification
+                  kind="error"
+                  title="Error"
+                  subtitle={saveError}
+                  onCloseButtonClick={() => setSaveError(null)}
+                  lowContrast
+                />
+              )}
+
+              {saveSuccess && (
+                <InlineNotification
+                  kind="success"
+                  title="Success"
+                  subtitle={saveSuccess}
+                  onCloseButtonClick={() => setSaveSuccess(null)}
+                  lowContrast
+                />
+              )}
+
+              <div style={buttonContainerStyle}>
+                <Button
+                  kind="secondary"
+                  onClick={handleCancelClick}
+                  renderIcon={Close}
+                  disabled={isSaving}
+                  style={actionButtonStyle}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  renderIcon={Save}
+                  disabled={isSaving || !roomType.roomTypeName || !roomType.roomTypeDescription}
+                >
+                  {isSaving ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
+            </Stack>
+          </Form>
+        </Column>
+      </Grid>
+
+      <Modal
+        open={showCancelModal}
+        onRequestClose={() => setShowCancelModal(false)}
+        onRequestSubmit={() => navigate('/types/room')}
+        modalHeading="Discard Changes?"
+        primaryButtonText="Discard"
+        secondaryButtonText="Continue Editing"
+        danger
+      >
+        <p>
+          You have unsaved changes. Are you sure you want to leave? Your changes will be lost.
+        </p>
+      </Modal>
+    </div>
+  );
+}
+
+export default RoomTypeForm; 

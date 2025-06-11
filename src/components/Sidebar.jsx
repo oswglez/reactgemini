@@ -1,6 +1,7 @@
 // src/components/Sidebar.jsx
-import React from 'react';
-import { NavLink } from 'react-router-dom'; // Usar NavLink para estilo activo
+import React, { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { CaretDown, CaretUp } from '@carbon/icons-react';
 
 // --- ASEGÚRATE DE TENER ESTAS DEFINICIONES DE ESTILO ---
 const sidebarStyle = {
@@ -33,10 +34,44 @@ const activeStyle = {
   backgroundColor: 'rgba(255, 255, 255, 0.2)', // Fondo blanco semitransparente
   fontWeight: 'bold',
 };
+
+const sectionTitleStyle = {
+  color: '#a799ff',
+  fontSize: '0.875rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  padding: '0.75rem 1rem',
+  marginTop: '1.5rem',
+  marginBottom: '0.5rem',
+  borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+};
+
+const subMenuStyle = {
+  paddingLeft: '1rem',
+  overflow: 'hidden',
+  transition: 'max-height 0.3s ease-in-out',
+};
+
+const subLinkStyle = {
+  ...linkStyle,
+  fontSize: '0.9em',
+  padding: '0.5rem 1rem 0.5rem 2rem',
+  marginBottom: '0.25rem',
+};
+
+const menuTitleStyle = {
+  ...linkStyle,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  cursor: 'pointer',
+};
 // --- FIN DE DEFINICIONES DE ESTILO ---
 
 function Sidebar() {
-  // --- ASEGÚRATE DE QUE EL RETURN INCLUYA EL DIV EXTERIOR ---
+  const location = useLocation();
+  const [isTypesOpen, setIsTypesOpen] = useState(location.pathname.includes('/types'));
+
   return (
     <div style={sidebarStyle}>
       {' '}
@@ -53,7 +88,7 @@ function Sidebar() {
       </h3>
       <nav>
         <ul style={navListStyle}>
-          {/* Enlaces (cada NavLink usa los estilos) */}
+          {/* Main Navigation */}
           <li>
             <NavLink
               to="/"
@@ -63,12 +98,15 @@ function Sidebar() {
                 ...(isActive ? activeStyle : {}),
               })}
             >
-              Home / Dashboard
+              Dashboard
             </NavLink>
           </li>
+
+          {/* Hotels Section */}
+          <li style={sectionTitleStyle}>Hotels</li>
           <li>
             <NavLink
-              to="/hotel-list" //
+              to="/hotel-list"
               style={({ isActive }) => ({
                 ...linkStyle,
                 ...(isActive ? activeStyle : {}),
@@ -88,10 +126,12 @@ function Sidebar() {
               Create New Hotel
             </NavLink>
           </li>
-          {/* --- NUEVA OPCIÓN AÑADIDA: MANAGE AMENITIES --- */}
+
+          {/* Amenities Section */}
+          <li style={sectionTitleStyle}>Amenities</li>
           <li>
             <NavLink
-              to="/amenities-list" 
+              to="/amenities-list"
               style={({ isActive }) => ({
                 ...linkStyle,
                 ...(isActive ? activeStyle : {}),
@@ -100,30 +140,70 @@ function Sidebar() {
               Manage Amenities
             </NavLink>
           </li>
-          {/* --- FIN NUEVA OPCIÓN --- */}
-          <li
-            style={{
-              marginTop: '1.5rem',
-              paddingTop: '0.75rem',
-              borderTop: '1px solid #555',
-            }}
-          >
-            <NavLink
-              to="/types"
-              style={({ isActive }) => ({
-                ...linkStyle,
-                ...(isActive ? activeStyle : {}),
-              })}
+
+          {/* Types Management Section */}
+          <li style={sectionTitleStyle}>System Types</li>
+          <li>
+            <div
+              style={menuTitleStyle}
+              onClick={() => setIsTypesOpen(!isTypesOpen)}
             >
-              Manage Types
-            </NavLink>
+              <span>Types Management</span>
+              {isTypesOpen ? (
+                <CaretUp size={16} style={{ marginLeft: '0.5rem' }} />
+              ) : (
+                <CaretDown size={16} style={{ marginLeft: '0.5rem' }} />
+              )}
+            </div>
+            <div
+              style={{
+                ...subMenuStyle,
+                maxHeight: isTypesOpen ? '500px' : '0',
+              }}
+            >
+              <NavLink
+                to="/types-management"
+                end
+                style={({ isActive }) => ({
+                  ...subLinkStyle,
+                  ...(isActive ? activeStyle : {}),
+                })}
+              >
+                Overview
+              </NavLink>
+              <NavLink
+                to="/types/media"
+                style={({ isActive }) => ({
+                  ...subLinkStyle,
+                  ...(isActive ? activeStyle : {}),
+                })}
+              >
+                Media Types
+              </NavLink>
+              <NavLink
+                to="/types/amenity"
+                style={({ isActive }) => ({
+                  ...subLinkStyle,
+                  ...(isActive ? activeStyle : {}),
+                })}
+              >
+                Amenity Types
+              </NavLink>
+              <NavLink
+                to="/types/room"
+                style={({ isActive }) => ({
+                  ...subLinkStyle,
+                  ...(isActive ? activeStyle : {}),
+                })}
+              >
+                Room Types
+              </NavLink>
+            </div>
           </li>
-          {/* ... otros enlaces/placeholders ... */}
         </ul>
       </nav>
     </div> // <-- Cierre del DIV exterior
   );
-  // --- FIN DEL RETURN ---
 }
 
 export default Sidebar;
