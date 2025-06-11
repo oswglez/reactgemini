@@ -126,7 +126,7 @@ function AmenityForm() {
       amenityType: formData.type,
       amenityDescription: formData.description,
     };
-    const apiUrl = `${import.meta.env.VITE_HOTEL_API_BASE_URL}/api/amenities?hotelId=${hotelId}`;
+    const apiUrl = `http://localhost:8090/api/amenities?hotelId=${hotelId}`;
     console.log(`Sending Payload to ${apiUrl}:`, JSON.stringify(payload, null, 2));
 
     try {

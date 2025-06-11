@@ -31,24 +31,21 @@ function HotelList() {
   const [totalElements, setTotalElements] = useState(0);
   const [sortColumn, setSortColumn] = useState('hotelName');
   const [sortDirection, setSortDirection] = useState('ASC');
-
-  // Nuevos estados para el modal de eliminación
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [hotelToDeleteId, setHotelToDeleteId] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(null);
 
-
-  const fetchHotels = useCallback(async (page, size, column, direction) => {
+  // Memoizar la función de fetch para evitar recreaciones innecesarias
+  const fetchHotels = useCallback(async () => {
     setLoading(true);
     setError(null);
-    // Limpiar mensajes de éxito/error de eliminación al recargar
     setDeleteError(null);
     setDeleteSuccess(null);
     try {
-      let url = `http://localhost:8090/api/hotels/hotelList?page=${page}&size=${size}`;
-      if (column && direction) {
-        url += `&sort=${column},${direction.toLowerCase()}`;
+      let url = `http://localhost:8090/api/hotels/hotelList?page=${currentPage}&size=${pageSize}`;
+      if (sortColumn && sortDirection) {
+        url += `&sort=${sortColumn},${sortDirection.toLowerCase()}`;
       }
       console.log('Fetching URL:', url);
       const response = await fetch(url);
@@ -70,12 +67,12 @@ function HotelList() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage, pageSize, sortColumn, sortDirection]); // Incluir todas las dependencias necesarias
 
+  // Usar useEffect sin fetchHotels como dependencia
   useEffect(() => {
-    console.log('useEffect triggered with:', { currentPage, pageSize, sortColumn, sortDirection });
-    fetchHotels(currentPage, pageSize, sortColumn, sortDirection);
-  }, [fetchHotels, currentPage, pageSize, sortColumn, sortDirection]);
+    fetchHotels();
+  }, [fetchHotels]); // fetchHotels ya incluye las dependencias necesarias
 
   const handleSort = useCallback((columnKey) => {
     console.log(`handleSort (called by DataTable) for column: ${columnKey}`);
@@ -196,7 +193,7 @@ function HotelList() {
       // Recargar la lista de hoteles
       // Forzamos una recarga desde la página actual o la primera si la actual queda vacía
       // Esta lógica puede necesitar ajustes dependiendo de cómo tu API maneje la paginación después de una eliminación
-      fetchHotels(currentPage, pageSize, sortColumn, sortDirection);
+      fetchHotels();
 
     } catch (err) {
       console.error('Error deleting hotel:', err);

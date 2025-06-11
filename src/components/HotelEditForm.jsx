@@ -20,12 +20,12 @@ import {
   getExampleNumber,
   parsePhoneNumberFromString,
   getCountryCallingCode,
-  isValidPhoneNumber,
 } from 'libphonenumber-js';
+import ReactDOM from 'react-dom';
 
-// Obtener la URL base de la API del ambiente actual
-const API_BASE_URL = import.meta.env.VITE_HOTEL_API_BASE_URL || 'http://localhost:8090';
-const API_PATH = '/api';
+// Eliminar las variables de ambiente y usar URLs hardcodeadas
+// const API_BASE_URL = import.meta.env.VITE_HOTEL_API_BASE_URL || 'http://localhost:8090';
+// const API_PATH = '/api';
 
 // --- Estilos (copiados de versiones anteriores, asegúrate que sean los correctos para ti) ---
 const formContainerStyle = {
@@ -60,8 +60,9 @@ const hotelStatusItems = [
 function HotelEditForm() {
   const navigate = useNavigate();
   const { hotelId } = useParams();
-  console.log('HotelEditForm - Initializing with hotelId:', hotelId);
-  console.log('HotelEditForm - API_BASE_URL:', API_BASE_URL);
+
+  // Eliminar logs de ambiente
+  // console.log('HotelEditForm - API_BASE_URL:', API_BASE_URL);
 
   const [initialDataLoading, setInitialDataLoading] = useState(true);
   const [isHotelFound, setIsHotelFound] = useState(true);
@@ -127,12 +128,9 @@ function HotelEditForm() {
     const loadChains = async () => {
       setLoadingChains(true);
       try {
-        const response = await fetch(`${API_BASE_URL}${API_PATH}/chain`);
-        console.log('HotelEditForm - Chains API Response:', response.status);
-        
+        const response = await fetch(`http://localhost:8090/api/chain`);
         if (!response.ok) throw new Error('Network response for chains was not ok');
         const data = await response.json();
-        console.log('HotelEditForm - Loaded chains:', data);
         
         const chainItems = [
           createPlaceholderItem('chain', 'chain'),
@@ -140,7 +138,7 @@ function HotelEditForm() {
         ];
         setChains(chainItems);
       } catch (error) {
-        console.error("HotelEditForm - Error fetching chains:", error);
+        console.error("Error fetching chains:", error);
         setChains([createErrorItem('chains', 'chains')]);
         setFeedback({ type: 'error', message: `Error loading chains: ${error.message}` });
       } finally {
@@ -160,7 +158,7 @@ function HotelEditForm() {
     setLoadingBrands(true);
     setBrands([createLoadingItem('brands', 'brands')]);
     try {
-      const response = await fetch(`${API_BASE_URL}${API_PATH}/chain/${chainId}/brands`);
+      const response = await fetch(`http://localhost:8090/api/chain/${chainId}/brands`);
       if (!response.ok) throw new Error('Network response for brands was not ok');
       const data = await response.json();
       const brandItemsList = data && data.length > 0 ?
@@ -181,131 +179,156 @@ function HotelEditForm() {
   useEffect(() => {
     const fetchHotelData = async () => {
       if (!hotelId) {
-        console.error('HotelEditForm - No hotelId provided');
+        console.error('No hotelId provided');
         setIsHotelFound(false);
         return;
       }
 
       setInitialDataLoading(true);
-      console.log('HotelEditForm - Starting to fetch hotel data for ID:', hotelId);
 
       try {
-        const apiUrl = `${API_BASE_URL}${API_PATH}/hotels/${hotelId}/withRelations`;
-        console.log('HotelEditForm - Fetching from URL:', apiUrl);
-
+        const apiUrl = `http://localhost:8090/api/hotels/${hotelId}/withRelations`;
         const hotelResponse = await fetch(apiUrl);
-        console.log('HotelEditForm - Response status:', hotelResponse.status);
 
         if (!hotelResponse.ok) {
           if (hotelResponse.status === 404) {
-            console.error('HotelEditForm - Hotel not found');
             setIsHotelFound(false);
           }
           const errorText = await hotelResponse.text();
-          console.error('HotelEditForm - Error response:', errorText);
           throw new Error(`Network error loading hotel: ${hotelResponse.status} ${errorText}`);
         }
 
         const data = await hotelResponse.json();
-        console.log('HotelEditForm - Fetched hotel data:', data);
-        setOriginalHotelData(data);
-
-        // Populate form fields
-        setHotelCode(data.hotelCode || '');
-        setHotelName(data.hotelName || '');
-        const statusItem = hotelStatusItems.find(item => item.id === data.hotelStatus);
-        setSelectedHotelStatus(statusItem || null);
-        setWebsite(data.hotelWebsiteUrl || '');
-        setDisclaimer(data.disclaimer || '');
-
-        // Handle chain and brand data
-        if (data.chainId) {
-          console.log('HotelEditForm - Setting chain:', data.chainId, data.chainName);
-          const chainItem = chains.find(c => c.id === data.chainId.toString());
-          if (chainItem) {
-            setSelectedChain(chainItem);
-            
-            // Load brands for this chain
-            try {
-              const brandsResponse = await fetch(`${API_BASE_URL}${API_PATH}/chain/${data.chainId}/brands`);
-              if (brandsResponse.ok) {
-                const brandsData = await brandsResponse.json();
-                console.log('HotelEditForm - Loaded brands for chain:', brandsData);
-                
-                const brandItems = [
-                  createPlaceholderItem('brand', 'brand'),
-                  ...brandsData.map(b => ({ id: b.brandId.toString(), text: b.brandName }))
-                ];
-                setBrands(brandItems);
-
-                // Set the selected brand
-                if (data.brandId) {
-                  const brandItem = brandItems.find(b => b.id === data.brandId.toString());
-                  if (brandItem) {
-                    console.log('HotelEditForm - Setting brand:', brandItem);
-                    setSelectedBrand(brandItem);
-                  }
-                }
-              }
-            } catch (error) {
-              console.error('HotelEditForm - Error loading brands:', error);
-              setBrands([createErrorItem('brands', 'brands')]);
-            }
-          }
-        }
+        
+        // Batch all state updates together
+        const updates = {
+          originalHotelData: data,
+          hotelCode: data.hotelCode || '',
+          hotelName: data.hotelName || '',
+          selectedHotelStatus: hotelStatusItems.find(item => item.id === data.hotelStatus) || null,
+          website: data.hotelWebsiteUrl || '',
+          disclaimer: data.disclaimer || '',
+        };
 
         // Handle address data
         if (data.mainAddress) {
-          console.log('HotelEditForm - Setting address data:', data.mainAddress);
-          setStreetAddress(data.mainAddress.street || '');
-          setStateProvince(data.mainAddress.state || '');
-          setCity(data.mainAddress.city || '');
-          setZipCode(data.mainAddress.postalCode || '');
+          updates.streetAddress = data.mainAddress.street || '';
+          updates.stateProvince = data.mainAddress.state || '';
+          updates.city = data.mainAddress.city || '';
+          updates.zipCode = data.mainAddress.postalCode || '';
           
           const countryCode = data.mainAddress.country;
           if (countryCode && countryDropdownItems.length > 1) {
-            const countryItem = countryDropdownItems.find(c => c.id === countryCode);
-            console.log('HotelEditForm - Setting country:', countryItem);
-            setSelectedCountry(countryItem || null);
+            updates.selectedCountry = countryDropdownItems.find(c => c.id === countryCode) || null;
           }
         }
 
         // Handle phone number
         if (data.localPhone) {
-          console.log('HotelEditForm - Setting phone number:', data.localPhone);
-          setMainPhoneNumberRaw(data.localPhone);
+          updates.mainPhoneNumberRaw = data.localPhone;
           const countryCode = data.mainAddress?.country;
           if (countryCode) {
             const formatter = new AsYouType(countryCode);
-            setMainPhoneNumberFormatted(formatter.input(data.localPhone));
+            updates.mainPhoneNumberFormatted = formatter.input(data.localPhone);
           } else {
-            setMainPhoneNumberFormatted(data.localPhone);
+            updates.mainPhoneNumberFormatted = data.localPhone;
           }
         }
 
         // Handle contact data
         if (data.mainContact) {
-          console.log('HotelEditForm - Setting contact data:', data.mainContact);
-          setContactFirstName(data.mainContact.firstName || '');
-          setContactLastName(data.mainContact.lastName || '');
-          setContactTitle(data.mainContact.contactTitle || '');
-          setContactEmail(data.mainContact.contactEmail || '');
+          updates.contactFirstName = data.mainContact.firstName || '';
+          updates.contactLastName = data.mainContact.lastName || '';
+          updates.contactTitle = data.mainContact.contactTitle || '';
+          updates.contactEmail = data.mainContact.contactEmail || '';
           
           if (data.mainContact.contactMobileNumber) {
-            setContactMobilePhoneRaw(data.mainContact.contactMobileNumber);
+            updates.contactMobilePhoneRaw = data.mainContact.contactMobileNumber;
             const countryCode = data.mainAddress?.country;
             if (countryCode) {
               const formatter = new AsYouType(countryCode);
-              setContactMobilePhoneFormatted(formatter.input(data.mainContact.contactMobileNumber));
+              updates.contactMobilePhoneFormatted = formatter.input(data.mainContact.contactMobileNumber);
             } else {
-              setContactMobilePhoneFormatted(data.mainContact.contactMobileNumber);
+              updates.contactMobilePhoneFormatted = data.mainContact.contactMobileNumber;
             }
           }
         }
 
-        setIsHotelFound(true);
+        // Handle chain and brand data
+        if (data.chainId && chains.length > 1) {
+          const chainItem = chains.find(c => c.id === data.chainId.toString());
+          if (chainItem) {
+            updates.selectedChain = chainItem;
+            
+            try {
+              const brandsResponse = await fetch(`http://localhost:8090/api/chain/${data.chainId}/brands`);
+              if (brandsResponse.ok) {
+                const brandsData = await brandsResponse.json();
+                const brandItems = [
+                  createPlaceholderItem('brand', 'brand'),
+                  ...brandsData.map(b => ({ id: b.brandId.toString(), text: b.brandName }))
+                ];
+                updates.brands = brandItems;
+
+                if (data.brandId) {
+                  const brandItem = brandItems.find(b => b.id === data.brandId.toString());
+                  if (brandItem) {
+                    updates.selectedBrand = brandItem;
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error loading brands:', error);
+              updates.brands = [createErrorItem('brands', 'brands')];
+            }
+          }
+        }
+
+        // Apply all updates at once using a React batch update
+        ReactDOM.unstable_batchedUpdates(() => {
+          setOriginalHotelData(updates.originalHotelData);
+          setHotelCode(updates.hotelCode);
+          setHotelName(updates.hotelName);
+          setSelectedHotelStatus(updates.selectedHotelStatus);
+          setWebsite(updates.website);
+          setDisclaimer(updates.disclaimer);
+          
+          if (updates.streetAddress !== undefined) {
+            setStreetAddress(updates.streetAddress);
+            setStateProvince(updates.stateProvince);
+            setCity(updates.city);
+            setZipCode(updates.zipCode);
+            if (updates.selectedCountry) setSelectedCountry(updates.selectedCountry);
+          }
+          
+          if (updates.mainPhoneNumberRaw !== undefined) {
+            setMainPhoneNumberRaw(updates.mainPhoneNumberRaw);
+            setMainPhoneNumberFormatted(updates.mainPhoneNumberFormatted);
+          }
+          
+          if (updates.contactFirstName !== undefined) {
+            setContactFirstName(updates.contactFirstName);
+            setContactLastName(updates.contactLastName);
+            setContactTitle(updates.contactTitle);
+            setContactEmail(updates.contactEmail);
+          }
+          
+          if (updates.contactMobilePhoneRaw !== undefined) {
+            setContactMobilePhoneRaw(updates.contactMobilePhoneRaw);
+            setContactMobilePhoneFormatted(updates.contactMobilePhoneFormatted);
+          }
+          
+          if (updates.selectedChain !== undefined) {
+            setSelectedChain(updates.selectedChain);
+            if (updates.brands) setBrands(updates.brands);
+            if (updates.selectedBrand) setSelectedBrand(updates.selectedBrand);
+          }
+          
+          setIsHotelFound(true);
+        });
+
       } catch (error) {
-        console.error('HotelEditForm - Error fetching hotel data:', error);
+        console.error('Error fetching hotel data:', error);
         setFeedback({
           type: 'error',
           message: error.message || 'Failed to load hotel data'
@@ -316,52 +339,84 @@ function HotelEditForm() {
       }
     };
 
-    fetchHotelData();
-  }, [hotelId, chains]); // Added chains as dependency
-
-  const handlePhoneNumberChange = (e, countryCodeISO, setRawValue, setFormattedValue, setErrorValue) => {
-    const rawValue = e.target.value;
-    setRawValue(rawValue);
-    if (countryCodeISO) {
-      const formatter = new AsYouType(countryCodeISO);
-      setFormattedValue(formatter.input(rawValue));
-      setErrorValue('');
-    } else {
-      setFormattedValue(rawValue);
-      if (rawValue) setErrorValue('Please select a country first to format/validate phone number.');
-      else setErrorValue('');
+    // Solo ejecutar fetchHotelData cuando chains y countryDropdownItems estén cargados
+    if (chains.length > 1 && countryDropdownItems.length > 1) {
+      fetchHotelData();
     }
-  };
+  }, [hotelId, chains, countryDropdownItems]); // Agregamos las dependencias necesarias
 
   const validatePhoneNumber = (numberRaw, countryCodeISO, fieldName, setErrorFunc) => {
     if (!numberRaw || numberRaw.trim() === '') {
-      setErrorFunc(''); return null;
+      setErrorFunc('');
+      return null;
     }
     if (!countryCodeISO) {
-      setErrorFunc(`${fieldName}: Select a country to validate phone.`); return null;
+      setErrorFunc(`${fieldName}: Select a country to validate phone.`);
+      return null;
     }
+
     try {
+      // Intentar parsear el número de teléfono
       const phoneNumber = parsePhoneNumberFromString(numberRaw, countryCodeISO);
-      if (phoneNumber && phoneNumber.isValid()) {
-        setErrorFunc(''); return phoneNumber.format('E.164');
+      
+      // Si no se puede parsear el número para este país, permitir el número sin validación
+      if (!phoneNumber) {
+        console.warn(`Country ${countryCodeISO} not supported for phone validation. Allowing number as-is.`);
+        setErrorFunc('');
+        return numberRaw;
+      }
+
+      // Si se pudo parsear, validar el número
+      if (phoneNumber.isValid()) {
+        setErrorFunc('');
+        return phoneNumber.format('E.164');
       } else {
-        setErrorFunc(`${fieldName}: Invalid phone number for selected country.`); return null;
+        setErrorFunc(`${fieldName}: Invalid phone number for selected country.`);
+        return null;
       }
     } catch (error) {
-      setErrorFunc(`${fieldName}: Error validating phone number. ${error}`); return null;
+      // Si hay un error con el país, permitir el número sin validación
+      console.warn(`Error validating phone for country ${countryCodeISO}:`, error);
+      setErrorFunc('');
+      return numberRaw;
     }
   };
 
   const getPhonePlaceholder = (countryCodeISO) => {
-    if (countryCodeISO) {
-      try {
-        const example = getExampleNumber(countryCodeISO, 'NATIONAL');
-        if (example) return example.formatNational();
-      } catch (e) { /* Silencio */ }
+    if (!countryCodeISO) return 'Enter phone number';
+    
+    try {
+      const example = getExampleNumber(countryCodeISO, 'NATIONAL');
+      if (example) return example.formatNational();
+    } catch (e) {
+      // Si no se puede obtener un ejemplo, devolver un formato genérico
+      console.warn(`Could not get example for country ${countryCodeISO}:`, e);
     }
-    return 'Enter phone number';
+    return 'Enter phone number (no specific format available)';
   };
   
+  const handlePhoneNumberChange = (rawValue, countryCodeISO, setRawValue, setFormattedValue, setErrorValue) => {
+    setRawValue(rawValue);
+    if (!countryCodeISO) {
+      setFormattedValue(rawValue);
+      if (rawValue) setErrorValue('Please select a country first to format/validate phone number.');
+      else setErrorValue('');
+      return;
+    }
+
+    try {
+      const formatter = new AsYouType(countryCodeISO);
+      const formattedNumber = formatter.input(rawValue);
+      setFormattedValue(formattedNumber || rawValue);
+      setErrorValue('');
+    } catch (error) {
+      // Si hay un error con el formato, mantener el número sin formato
+      console.warn(`Could not format phone for country ${countryCodeISO}:`, error);
+      setFormattedValue(rawValue);
+      setErrorValue('');
+    }
+  };
+
   const resetFormFieldsToOriginal = useCallback(() => {
     if (!originalHotelData) return; // No hacer nada si no hay datos originales
     const data = originalHotelData; // Usar datos guardados
@@ -432,8 +487,10 @@ function HotelEditForm() {
   }, [originalHotelData, countryDropdownItems, chains, brands]); // Dependencias para resetear
 
 
-  const handleSubmit = async (e) => { /* ... (sin cambios respecto a la última versión) ... */
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+    setIsSubmitting(true);
     setFeedback({ type: '', message: '' });
 
     const currentCountryCode = selectedCountry ? selectedCountry.code : null;
@@ -449,7 +506,6 @@ function HotelEditForm() {
       setIsSubmitting(false); window.scrollTo({ top: 0, behavior: 'smooth' }); return;
     }
 
-    setIsSubmitting(true);
     const payload = {
       hotelCode: hotelCode || null,
       hotelName,
@@ -478,7 +534,7 @@ function HotelEditForm() {
     console.log('Submitting Update Form Data to Backend:', JSON.stringify(payload, null, 2));
 
     try {
-      const response = await fetch(`${API_BASE_URL}${API_PATH}/hotels/updateWithDetails/${hotelId}`, {
+      const response = await fetch(`http://localhost:8090/api/hotels/updateWithDetails/${hotelId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -504,12 +560,12 @@ function HotelEditForm() {
   };
   
   const handleDeleteAttempt = () => setOpenDeleteModal(true);
-  const proceedWithDelete = async () => { /* ... (sin cambios) ... */ 
+  const proceedWithDelete = async () => {
     setOpenDeleteModal(false);
     setIsSubmitting(true); 
     setFeedback({ type: '', message: '' });
     try {
-      const response = await fetch(`${API_BASE_URL}${API_PATH}/hotels/${hotelId}/soft-delete`, {
+      const response = await fetch(`http://localhost:8090/api/hotels/${hotelId}/soft-delete`, {
         method: 'PUT',
       });
       if (!response.ok) {
@@ -541,6 +597,10 @@ function HotelEditForm() {
   };
   const closeModal = () => setOpenCancelModal(false);
 
+  const validateForm = () => {
+    // Implementa la lógica para validar el formulario
+    return true; // Placeholder, actual implementación necesaria
+  };
 
   if (initialDataLoading) {
     return <Loading description="Loading hotel data..." withOverlay={false} style={{ margin: '2rem' }} />;
@@ -686,7 +746,7 @@ function HotelEditForm() {
               labelText="" 
               placeholder={getPhonePlaceholder(selectedCountry?.code)}
               value={mainPhoneNumberFormatted}
-              onChange={(e) => handlePhoneNumberChange(e, selectedCountry?.code, setMainPhoneNumberRaw, setMainPhoneNumberFormatted, setMainPhoneNumberError)}
+              onChange={(e) => handlePhoneNumberChange(e.target.value, selectedCountry?.code, setMainPhoneNumberRaw, setMainPhoneNumberFormatted, setMainPhoneNumberError)}
               onBlur={() => validatePhoneNumber(mainPhoneNumberRaw, selectedCountry?.code, "Hotel Phone", setMainPhoneNumberError)}
               invalid={!!mainPhoneNumberError} invalidText={mainPhoneNumberError} style={{ width: '100%' }}
             />
@@ -722,7 +782,7 @@ function HotelEditForm() {
               id="contact-mobile-phone" type="tel" labelText=""
               placeholder={getPhonePlaceholder(selectedCountry?.code)}
               value={contactMobilePhoneFormatted}
-              onChange={(e) => handlePhoneNumberChange(e, selectedCountry?.code, setContactMobilePhoneRaw, setContactMobilePhoneFormatted, setContactMobilePhoneError)}
+              onChange={(e) => handlePhoneNumberChange(e.target.value, selectedCountry?.code, setContactMobilePhoneRaw, setContactMobilePhoneFormatted, setContactMobilePhoneError)}
               onBlur={() => validatePhoneNumber(contactMobilePhoneRaw, selectedCountry?.code, "Contact Phone", setContactMobilePhoneError)}
               invalid={!!contactMobilePhoneError} invalidText={contactMobilePhoneError} style={{ width: '100%' }}
             />

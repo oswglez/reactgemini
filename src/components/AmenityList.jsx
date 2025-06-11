@@ -7,7 +7,6 @@ import {
   Modal,
 } from '@carbon/react';
 import { AddFilled, ArrowUp, ArrowDown, TrashCan, Edit } from '@carbon/icons-react';
-import { getEnvironmentConfig } from '../public/env.config';
 
 // Estilos (similares a HotelList, ajusta si es necesario)
 const containerStyle = { marginTop: '1rem', width: '100%', padding: '20px', backgroundColor: '#f9f9f9' };
@@ -33,12 +32,6 @@ function AmenityList() {
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(null);
 
-  // Obtener la configuración del ambiente actual
-  const env = import.meta.env.MODE || 'development';
-  const config = getEnvironmentConfig(env);
-  const API_BASE_URL = config.VITE_HOTEL_API_BASE_URL;
-
-  // --- Fetch Amenities ---
   const fetchAmenities = useCallback(async (page, size, column, direction) => {
     setLoading(true);
     setError(null);
@@ -46,7 +39,7 @@ function AmenityList() {
     setDeleteSuccess(null);
 
     try {
-      let url = `${API_BASE_URL}/api/amenities?page=${page}&size=${size}`;
+      let url = `http://localhost:8090/api/amenities?page=${page}&size=${size}`;
       if (column && direction) {
         url += `&sort=${column},${direction.toLowerCase()}`;
       }
@@ -79,7 +72,7 @@ function AmenityList() {
     } finally {
       setLoading(false);
     }
-  }, [API_BASE_URL]);
+  }, []);
 
   useEffect(() => {
     console.log('useEffect triggered with:', { currentPage, pageSize, sortColumn, sortDirection });
@@ -180,7 +173,7 @@ function AmenityList() {
     setDeleteSuccess(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/amenities/${amenityToDeleteId}`, {
+      const response = await fetch(`http://localhost:8090/api/amenities/${amenityToDeleteId}`, {
         method: 'DELETE',
       });
 
@@ -205,7 +198,7 @@ function AmenityList() {
   return (
     <div style={containerStyle}>
       <h2 style={{ textAlign: 'center', color: '#3751ff', marginBottom: '10px' }}>
-        Manage Amenities ({env.toUpperCase()} Environment)
+        Manage Amenities
       </h2>
       <p style={{ fontSize: '0.875rem', color: '#555', marginBottom: '20px', textAlign: 'center' }}>
         View and manage all amenities available in the system.
@@ -215,7 +208,7 @@ function AmenityList() {
       <div style={headerButtonContainerStyle}>
         <div>
           <p style={{ margin: 0, fontSize: '0.875rem', color: '#666' }}>
-            API URL: {API_BASE_URL}
+            API URL: http://localhost:8090/api/amenities
           </p>
         </div>
         <Link to="/amenities/new" style={{ textDecoration: 'none' }}>

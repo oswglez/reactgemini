@@ -88,7 +88,7 @@ function AddressForm() {
       hotelId: parseInt(hotelId, 10),
     };
 
-    const apiUrl = `${import.meta.env.VITE_HOTEL_API_BASE_URL}/api/addresses?hotelId=${hotelId}`;
+    const apiUrl = `http://localhost:8090/api/addresses?hotelId=${hotelId}`;
     console.log(`Sending Payload to ${apiUrl}:`, JSON.stringify(payload, null, 2));
 
     try {

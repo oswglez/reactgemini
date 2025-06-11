@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { getEnvironmentConfig } from '../public/env.config';
 import {
   Form,
   TextInput,
@@ -22,17 +21,11 @@ function HotelListForm() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Get the current environment configuration
-  const env = import.meta.env.MODE || 'development';
-  const config = getEnvironmentConfig(env);
-  const API_BASE_URL = config.VITE_API_URL;
-
   useEffect(() => {
     const fetchHotels = async () => {
       try {
         setLoading(true);
-        // Use the environment-specific API URL
-        const response = await fetch(`${API_BASE_URL}/api/hotels`);
+        const response = await fetch('http://localhost:8090/api/hotels');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -48,7 +41,7 @@ function HotelListForm() {
     };
 
     fetchHotels();
-  }, [API_BASE_URL]); // Re-fetch if API URL changes
+  }, []); // No need for API_BASE_URL dependency
 
   const filteredHotels = hotels.filter(hotel =>
     hotel.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -62,8 +55,8 @@ function HotelListForm() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1>Hotel List ({env.toUpperCase()} Environment)</h1>
-      <p>API Endpoint: {API_BASE_URL}</p>
+      <h1>Hotel List</h1>
+      <p>API Endpoint: http://localhost:8090/api/hotels</p>
 
       {error && (
         <InlineNotification
