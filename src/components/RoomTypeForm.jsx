@@ -19,6 +19,7 @@ import {
   IconButton,
 } from '@carbon/react';
 import { Add, TrashCan } from '@carbon/icons-react';
+import { getApiBaseUrl } from '../services/config';
 
 // Table Headers
 const headers = [
@@ -45,7 +46,8 @@ function RoomTypeForm() {
     setIsLoadingList(true);
     setListError(null);
     try {
-      const response = await fetch('http://localhost:8090/api/roomType'); // GET endpoint
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/roomType`); // GET endpoint
       if (!response.ok)
         throw new Error(`Error ${response.status}: Could not load room types`);
       const data = await response.json();
@@ -105,7 +107,8 @@ function RoomTypeForm() {
     setModalError(null);
     // *** VERIFY backend expects 'roomTypeName' in payload ***
     const payload = { roomTypeName: newTypeName };
-    const apiUrl = 'http://localhost:8090/api/roomType'; // POST endpoint
+    const baseUrl = getApiBaseUrl();
+    const apiUrl = `${baseUrl}/api/roomType`; // POST endpoint
 
     try {
       const response = await fetch(apiUrl, {
@@ -125,7 +128,7 @@ function RoomTypeForm() {
         throw new Error(errorMsg);
       }
       handleCloseModals();
-      fetchTypes(); // Close modal and refresh list on success
+      fetchTypes();
     } catch (err) {
       console.error('Error saving new room type:', err);
       setModalError(err.message || 'Could not save room type.');
@@ -138,7 +141,8 @@ function RoomTypeForm() {
     setModalLoading(true);
     setModalError(null);
     // *** VERIFY 'roomTypeId' is correct for DELETE URL ***
-    const apiUrl = `http://localhost:8090/api/roomType/${typeToDelete.roomTypeId}`;
+    const baseUrl = getApiBaseUrl();
+    const apiUrl = `${baseUrl}/api/roomType/${typeToDelete.roomTypeId}`;
 
     try {
       const response = await fetch(apiUrl, { method: 'DELETE' });

@@ -12,6 +12,7 @@ import {
   InlineNotification,
   Loading,
 } from '@carbon/react';
+import { getApiBaseUrl } from '../services/config';
 
 // Initial state for the address form fields
 const initialAddressState = {
@@ -88,7 +89,8 @@ function AddressForm() {
       hotelId: parseInt(hotelId, 10),
     };
 
-    const apiUrl = `http://localhost:8090/api/addresses?hotelId=${hotelId}`;
+    const baseUrl = getApiBaseUrl();
+    const apiUrl = `${baseUrl}/api/addresses?hotelId=${hotelId}`;
     console.log(`Sending Payload to ${apiUrl}:`, JSON.stringify(payload, null, 2));
 
     try {

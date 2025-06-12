@@ -12,6 +12,7 @@ import {
   Stack,
 } from '@carbon/react';
 import { Save, Close } from '@carbon/icons-react';
+import { getApiBaseUrl } from '../../services/config';
 
 // Styles
 const containerStyle = {
@@ -57,7 +58,8 @@ function AmenityTypeForm() {
     if (isEditMode) {
       const fetchAmenityType = async () => {
         try {
-          const response = await fetch(`http://localhost:8090/api/amenityType/${id}`);
+          const baseUrl = getApiBaseUrl();
+          const response = await fetch(`${baseUrl}/api/amenityType/${id}`);
           if (!response.ok) {
             throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch amenity type'}`);
           }
@@ -94,9 +96,10 @@ function AmenityTypeForm() {
     setSaveSuccess(null);
 
     try {
+      const baseUrl = getApiBaseUrl();
       const url = isEditMode
-        ? `http://localhost:8090/api/amenityType/${id}`
-        : 'http://localhost:8090/api/amenityType';
+        ? `${baseUrl}/api/amenityType/${id}`
+        : `${baseUrl}/api/amenityType`;
       
       const response = await fetch(url, {
         method: isEditMode ? 'PUT' : 'POST',
@@ -111,20 +114,16 @@ function AmenityTypeForm() {
         throw new Error(`HTTP Error ${response.status}: ${errorBody || 'Could not save amenity type'}`);
       }
 
-      const savedType = await response.json();
-      setSaveSuccess('Amenity type saved successfully!');
-      setInitialAmenityType(savedType);
-      setAmenityType(savedType);
+      const savedData = await response.json();
+      setSaveSuccess('Amenity type saved successfully.');
       setHasChanges(false);
-
-      // Navigate back after successful save
-      setTimeout(() => {
-        navigate('/types/amenity');
-      }, 1500);
-
+      setInitialAmenityType(savedData);
+      if (!isEditMode) {
+        navigate(`/amenity-types/${savedData.amenityTypeId}`);
+      }
     } catch (err) {
       console.error('Error saving amenity type:', err);
-      setSaveError(err.message || 'Could not save amenity type. Please try again.');
+      setSaveError(err.message || 'Could not save amenity type.');
     } finally {
       setIsSaving(false);
     }

@@ -5,7 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:test": "VITE_APP_ENV=test vite",
+    "dev:prod": "VITE_APP_ENV=production vite",
+    "dev:ngrok": "VITE_APP_ENV=ngrok vite",
     "build": "vite build",
+    "build:test": "VITE_APP_ENV=test vite build",
+    "build:prod": "VITE_APP_ENV=production vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

@@ -22,6 +22,7 @@ import {
   getCountryCallingCode,
   isValidPhoneNumber,
 } from 'libphonenumber-js';
+import { getApiBaseUrl } from '../services/config';
 
 // --- Estilos (sin cambios) ---
 const formContainerStyle = {
@@ -127,8 +128,7 @@ function HotelNewForm() {
           const callingCode = getCountryCallingCode(country.code);
           label = `${country.name} (+${callingCode})`;
         } catch (e) {
-          // Algunos códigos de `country-list` podrían no ser reconocidos por `libphonenumber-js`
-          // o ser regiones sin código de llamada directo.
+
           console.warn(`Could not get calling code for country: ${country.name} (${country.code})`);
         }
         return { id: country.code, text: label, code: country.code }; // Guardamos el código ISO original también
@@ -144,7 +144,8 @@ function HotelNewForm() {
   const fetchChainsData = useCallback(async () => {
     setLoadingChains(true);
     try {
-      const response = await fetch('http://localhost:8090/api/chain');
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/chain`);
       if (!response.ok) throw new Error('Network response for chains was not ok');
       const data = await response.json();
       setChains([
@@ -170,7 +171,8 @@ function HotelNewForm() {
         setLoadingBrands(true);
         setBrands([createLoadingItem('brands', 'brands')]);
         try {
-          const response = await fetch(`http://localhost:8090/api/chain/${selectedChain.id}/brands`);
+          const baseUrl = getApiBaseUrl();
+          const response = await fetch(`${baseUrl}/api/chain/${selectedChain.id}/brands`);
           if (!response.ok) throw new Error('Network response for brands was not ok');
           const data = await response.json();
           setBrands(data && data.length > 0 ?
@@ -355,7 +357,8 @@ function HotelNewForm() {
     console.log('Submitting Form Data to Backend:', JSON.stringify(formData, null, 2));
 
     try {
-      const response = await fetch('http://localhost:8090/api/hotels/createFull', {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/hotels/createFull`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

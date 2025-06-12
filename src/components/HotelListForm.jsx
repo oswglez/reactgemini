@@ -14,6 +14,7 @@ import {
   Loading,
   InlineNotification
 } from '@carbon/react';
+import { getApiBaseUrl } from '../services/config';
 
 function HotelListForm() {
   const [hotels, setHotels] = useState([]);
@@ -25,7 +26,8 @@ function HotelListForm() {
     const fetchHotels = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:8090/api/hotels');
+        const baseUrl = getApiBaseUrl();
+        const response = await fetch(`${baseUrl}/api/hotels`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -56,7 +58,7 @@ function HotelListForm() {
   return (
     <div style={{ padding: '2rem' }}>
       <h1>Hotel List</h1>
-      <p>API Endpoint: http://localhost:8090/api/hotels</p>
+      <p>Current API Endpoint: {getApiBaseUrl()}/api/hotels</p>
 
       {error && (
         <InlineNotification

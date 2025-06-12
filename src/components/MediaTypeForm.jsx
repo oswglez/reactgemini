@@ -19,6 +19,7 @@ import {
   IconButton,
 } from '@carbon/react';
 import { Add, TrashCan } from '@carbon/icons-react';
+import { getApiBaseUrl } from '../services/config';
 
 // Table Headers
 const headers = [
@@ -45,7 +46,8 @@ function MediaTypeForm() {
     setIsLoadingList(true);
     setListError(null);
     try {
-      const response = await fetch('http://localhost:8090/api/mediaType'); // GET endpoint
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/mediaType`); // GET endpoint
       if (!response.ok)
         throw new Error(`Error ${response.status}: Could not load media types`);
       const data = await response.json();
@@ -105,7 +107,8 @@ function MediaTypeForm() {
     setModalError(null);
     // *** VERIFY backend expects 'mediaTypeName' in payload ***
     const payload = { mediaTypeName: newTypeName };
-    const apiUrl = 'http://localhost:8090/api/mediaType'; // POST endpoint
+    const baseUrl = getApiBaseUrl();
+    const apiUrl = `${baseUrl}/api/mediaType`; // POST endpoint
 
     try {
       const response = await fetch(apiUrl, {
@@ -138,7 +141,8 @@ function MediaTypeForm() {
     setModalLoading(true);
     setModalError(null);
     // *** VERIFY 'mediaTypeId' is correct for DELETE URL ***
-    const apiUrl = `http://localhost:8090/api/mediaType/${typeToDelete.mediaTypeId}`;
+    const baseUrl = getApiBaseUrl();
+    const apiUrl = `${baseUrl}/api/mediaType/${typeToDelete.mediaTypeId}`;
 
     try {
       const response = await fetch(apiUrl, { method: 'DELETE' });
@@ -154,7 +158,7 @@ function MediaTypeForm() {
         throw new Error(errorMsg);
       }
       handleCloseModals();
-      fetchTypes();
+      fetchTypes(); // Close modal and refresh list on success
     } catch (err) {
       console.error('Error deleting media type:', err);
       setModalError(err.message || 'Could not delete media type.');

@@ -7,6 +7,7 @@ import {
   Modal,
 } from '@carbon/react';
 import { AddFilled, ArrowUp, ArrowDown, TrashCan, Edit } from '@carbon/icons-react';
+import { getApiBaseUrl } from '../services/config';
 
 // Estilos (similares a HotelList, ajusta si es necesario)
 const containerStyle = { marginTop: '1rem', width: '100%', padding: '20px', backgroundColor: '#f9f9f9' };
@@ -39,7 +40,8 @@ function AmenityList() {
     setDeleteSuccess(null);
 
     try {
-      let url = `http://localhost:8090/api/amenities?page=${page}&size=${size}`;
+      const baseUrl = getApiBaseUrl();
+      let url = `${baseUrl}/api/amenities?page=${page}&size=${size}`;
       if (column && direction) {
         url += `&sort=${column},${direction.toLowerCase()}`;
       }
@@ -173,7 +175,8 @@ function AmenityList() {
     setDeleteSuccess(null);
 
     try {
-      const response = await fetch(`http://localhost:8090/api/amenities/${amenityToDeleteId}`, {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/amenities/${amenityToDeleteId}`, {
         method: 'DELETE',
       });
 
@@ -208,7 +211,7 @@ function AmenityList() {
       <div style={headerButtonContainerStyle}>
         <div>
           <p style={{ margin: 0, fontSize: '0.875rem', color: '#666' }}>
-            API URL: http://localhost:8090/api/amenities
+            API URL: {getApiBaseUrl()}/api/amenities
           </p>
         </div>
         <Link to="/amenities/new" style={{ textDecoration: 'none' }}>

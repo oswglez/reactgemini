@@ -14,6 +14,7 @@ import {
   Loading,
 } from '@carbon/react';
 import { Add, TrashCan } from '@carbon/icons-react';
+import { getApiBaseUrl } from '../services/config';
 
 // Estado inicial usando nombres en inglés
 const initialAmenityState = {
@@ -46,7 +47,8 @@ function AmenityForm() {
       setLoadingOptions(true);
       setOptionsError(null);
       try {
-        const response = await fetch('http://localhost:8090/api/amenityType');
+        const baseUrl = getApiBaseUrl();
+        const response = await fetch(`${baseUrl}/api/amenityType`);
         if (!response.ok)
           throw new Error(
             `Error ${response.status}: Could not load amenity types`
@@ -126,7 +128,8 @@ function AmenityForm() {
       amenityType: formData.type,
       amenityDescription: formData.description,
     };
-    const apiUrl = `http://localhost:8090/api/amenities?hotelId=${hotelId}`;
+    const baseUrl = getApiBaseUrl();
+    const apiUrl = `${baseUrl}/api/amenities?hotelId=${hotelId}`;
     console.log(`Sending Payload to ${apiUrl}:`, JSON.stringify(payload, null, 2));
 
     try {

@@ -22,10 +22,8 @@ import {
   getCountryCallingCode,
 } from 'libphonenumber-js';
 import ReactDOM from 'react-dom';
+import { getApiBaseUrl } from '../services/config';
 
-// Eliminar las variables de ambiente y usar URLs hardcodeadas
-// const API_BASE_URL = import.meta.env.VITE_HOTEL_API_BASE_URL || 'http://localhost:8090';
-// const API_PATH = '/api';
 
 // --- Estilos (copiados de versiones anteriores, asegúrate que sean los correctos para ti) ---
 const formContainerStyle = {
@@ -128,7 +126,8 @@ function HotelEditForm() {
     const loadChains = async () => {
       setLoadingChains(true);
       try {
-        const response = await fetch(`http://localhost:8090/api/chain`);
+        const baseUrl = getApiBaseUrl();
+        const response = await fetch(`${baseUrl}/api/chain`);
         if (!response.ok) throw new Error('Network response for chains was not ok');
         const data = await response.json();
         
@@ -158,7 +157,8 @@ function HotelEditForm() {
     setLoadingBrands(true);
     setBrands([createLoadingItem('brands', 'brands')]);
     try {
-      const response = await fetch(`http://localhost:8090/api/chain/${chainId}/brands`);
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/chain/${chainId}/brands`);
       if (!response.ok) throw new Error('Network response for brands was not ok');
       const data = await response.json();
       const brandItemsList = data && data.length > 0 ?
@@ -187,7 +187,8 @@ function HotelEditForm() {
       setInitialDataLoading(true);
 
       try {
-        const apiUrl = `http://localhost:8090/api/hotels/${hotelId}/withRelations`;
+        const baseUrl = getApiBaseUrl();
+        const apiUrl = `${baseUrl}/api/hotels/${hotelId}/withRelations`;
         const hotelResponse = await fetch(apiUrl);
 
         if (!hotelResponse.ok) {
@@ -199,6 +200,8 @@ function HotelEditForm() {
         }
 
         const data = await hotelResponse.json();
+        console.log('Hotel data loaded:', data);
+        setIsHotelFound(true);
         
         // Batch all state updates together
         const updates = {
@@ -261,7 +264,7 @@ function HotelEditForm() {
             updates.selectedChain = chainItem;
             
             try {
-              const brandsResponse = await fetch(`http://localhost:8090/api/chain/${data.chainId}/brands`);
+              const brandsResponse = await fetch(`${baseUrl}/api/chain/${data.chainId}/brands`);
               if (brandsResponse.ok) {
                 const brandsData = await brandsResponse.json();
                 const brandItems = [
@@ -278,7 +281,7 @@ function HotelEditForm() {
                 }
               }
             } catch (error) {
-              console.error('Error loading brands:', error);
+              console.error("Error fetching brands for chain:", error);
               updates.brands = [createErrorItem('brands', 'brands')];
             }
           }
@@ -328,7 +331,7 @@ function HotelEditForm() {
         });
 
       } catch (error) {
-        console.error('Error fetching hotel data:', error);
+        console.error('Error loading hotel data:', error);
         setFeedback({
           type: 'error',
           message: error.message || 'Failed to load hotel data'
@@ -534,7 +537,8 @@ function HotelEditForm() {
     console.log('Submitting Update Form Data to Backend:', JSON.stringify(payload, null, 2));
 
     try {
-      const response = await fetch(`http://localhost:8090/api/hotels/updateWithDetails/${hotelId}`, {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/hotels/updateWithDetails/${hotelId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -565,7 +569,8 @@ function HotelEditForm() {
     setIsSubmitting(true); 
     setFeedback({ type: '', message: '' });
     try {
-      const response = await fetch(`http://localhost:8090/api/hotels/${hotelId}/soft-delete`, {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/hotels/${hotelId}/soft-delete`, {
         method: 'PUT',
       });
       if (!response.ok) {

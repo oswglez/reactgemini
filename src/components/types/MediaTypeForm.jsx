@@ -12,6 +12,7 @@ import {
   Stack,
 } from '@carbon/react';
 import { Save, Close } from '@carbon/icons-react';
+import { getApiBaseUrl } from '../../services/config';
 
 // Styles
 const containerStyle = {
@@ -57,7 +58,8 @@ function MediaTypeForm() {
     if (isEditMode) {
       const fetchMediaType = async () => {
         try {
-          const response = await fetch(`http://localhost:8090/api/mediaType/${id}`);
+          const baseUrl = getApiBaseUrl();
+          const response = await fetch(`${baseUrl}/api/mediaType/${id}`);
           if (!response.ok) {
             throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch media type'}`);
           }
@@ -94,9 +96,10 @@ function MediaTypeForm() {
     setSaveSuccess(null);
 
     try {
+      const baseUrl = getApiBaseUrl();
       const url = isEditMode
-        ? `http://localhost:8090/api/mediaType/${id}`
-        : 'http://localhost:8090/api/mediaType';
+        ? `${baseUrl}/api/mediaType/${id}`
+        : `${baseUrl}/api/mediaType`;
       
       const response = await fetch(url, {
         method: isEditMode ? 'PUT' : 'POST',
@@ -111,20 +114,16 @@ function MediaTypeForm() {
         throw new Error(`HTTP Error ${response.status}: ${errorBody || 'Could not save media type'}`);
       }
 
-      const savedType = await response.json();
-      setSaveSuccess('Media type saved successfully!');
-      setInitialMediaType(savedType);
-      setMediaType(savedType);
+      const savedData = await response.json();
+      setSaveSuccess('Media type saved successfully.');
       setHasChanges(false);
-
-      // Navigate back after successful save
-      setTimeout(() => {
-        navigate('/types/media');
-      }, 1500);
-
+      setInitialMediaType(savedData);
+      if (!isEditMode) {
+        navigate(`/media-types/${savedData.mediaTypeId}`);
+      }
     } catch (err) {
       console.error('Error saving media type:', err);
-      setSaveError(err.message || 'Could not save media type. Please try again.');
+      setSaveError(err.message || 'Could not save media type.');
     } finally {
       setIsSaving(false);
     }

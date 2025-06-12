@@ -7,6 +7,7 @@ import {
   Modal, // Importa Modal
 } from '@carbon/react';
 import { AddFilled, ArrowUp, ArrowDown, TrashCan } from '@carbon/icons-react'; // Importa TrashCan
+import { getApiBaseUrl } from '../services/config';
 
 // ... (estilos y decodeHotelStatus sin cambios)
 const containerStyle = { marginTop: '1rem', width: '100%', padding: '20px', backgroundColor: '#f9f9f9' };
@@ -43,7 +44,8 @@ function HotelList() {
     setDeleteError(null);
     setDeleteSuccess(null);
     try {
-      let url = `http://localhost:8090/api/hotels/hotelList?page=${currentPage}&size=${pageSize}`;
+      const baseUrl = getApiBaseUrl();
+      let url = `${baseUrl}/api/hotels/hotelList?page=${currentPage}&size=${pageSize}`;
       if (sortColumn && sortDirection) {
         url += `&sort=${sortColumn},${sortDirection.toLowerCase()}`;
       }
@@ -168,12 +170,13 @@ function HotelList() {
   const handleDeleteConfirm = async () => {
     if (!hotelToDeleteId) return;
 
-    setLoading(true); // Podrías usar un estado de carga específico para la eliminación
+    setLoading(true);
     setDeleteError(null);
     setDeleteSuccess(null);
 
     try {
-      const response = await fetch(`http://localhost:8090/api/hotels/${hotelToDeleteId}`, {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/hotels/${hotelToDeleteId}`, {
         method: 'DELETE',
       });
 
@@ -182,25 +185,18 @@ function HotelList() {
         throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not delete property'}. Body: ${errorBody}`);
       }
 
-      // Si la eliminación fue exitosa
       setDeleteSuccess('Property deleted successfully.');
       closeDeleteModal();
-      setSelectedRows(prev => { // Deseleccionar la fila eliminada
+      setSelectedRows(prev => {
         const newSelected = new Set(prev);
         newSelected.delete(hotelToDeleteId);
         return newSelected;
       });
-      // Recargar la lista de hoteles
-      // Forzamos una recarga desde la página actual o la primera si la actual queda vacía
-      // Esta lógica puede necesitar ajustes dependiendo de cómo tu API maneje la paginación después de una eliminación
       fetchHotels();
 
     } catch (err) {
       console.error('Error deleting hotel:', err);
       setDeleteError(err.message || 'Could not delete property. Please try again.');
-      // No cerramos el modal en caso de error para que el usuario vea el mensaje
-    } finally {
-      // setLoading(false); // Ya se maneja en fetchHotels o podrías tener un loading específico
     }
   };
   // --- Fin de funciones para el borrado ---

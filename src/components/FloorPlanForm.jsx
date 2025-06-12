@@ -13,6 +13,7 @@ import {
   IconButton,
 } from '@carbon/react';
 import { Add, TrashCan } from '@carbon/icons-react';
+import { getApiBaseUrl } from '../services/config';
 
 // Initial state for ONE floor plan row (using English keys)
 const initialFloorPlanRow = {
@@ -135,7 +136,8 @@ function FloorPlanForm() {
     }));
 
     // URL for the Batch API
-    const apiUrl = `http://localhost:8090/api/floorplan/batch/hotel/${hotelId}`;
+    const baseUrl = getApiBaseUrl();
+    const apiUrl = `${baseUrl}/api/floorplan/batch/hotel/${hotelId}`;
     console.log(
       `Sending Payload to ${apiUrl}:`,
       JSON.stringify(payload, null, 2)
@@ -169,12 +171,9 @@ function FloorPlanForm() {
     } catch (error) {
       console.error('Error saving floor plans:', error);
       setSubmitStatus('error');
-      // Translated error message
       setErrors((prev) => ({
         ...prev,
-        api:
-          error.message ||
-          'An unexpected error occurred while saving the floor plans.',
+        api: error.message || 'An unexpected error occurred while saving the floor plans.',
       }));
     } finally {
       setLoading(false);

@@ -5,6 +5,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 // Layouts
 import AppLayout from './components/AppLayout';
 import HotelManageLayout from './components/HotelManageLayout';
+import EnvironmentIndicator from './components/EnvironmentIndicator';
 
 // Vistas/Componentes
 import Dashboard from './components/Dashboard';
@@ -46,59 +47,62 @@ const HotelSubSectionNotFound = () => (
 
 function App() {
   return (
-    <Routes>
-      {/* Layout Principal - AppLayout */}
-      <Route path="/" element={<AppLayout />}>
-        {/* Ruta Raíz: Dashboard */}
-        <Route index element={<Dashboard />} />
+    <>
+      <Routes>
+        {/* Layout Principal - AppLayout */}
+        <Route path="/" element={<AppLayout />}>
+          {/* Ruta Raíz: Dashboard */}
+          <Route index element={<Dashboard />} />
 
-        {/* Redirección de /types a /types-management */}
-        <Route path="types" element={<Navigate to="/types-management" replace />} />
+          {/* Redirección de /types a /types-management */}
+          <Route path="types" element={<Navigate to="/types-management" replace />} />
 
-        {/* Gestión de Tipos - Movido arriba para priorizar el matching */}
-        <Route path="types-management" element={<TypesManagementPage />} />
-        
-        {/* Types Management Routes */}
-        <Route path="types/media" element={<MediaTypeList />} />
-        <Route path="types/media/new" element={<MediaTypeForm />} />
-        <Route path="types/media/edit/:id" element={<MediaTypeForm />} />
-        
-        <Route path="types/amenity" element={<AmenityTypeList />} />
-        <Route path="types/amenity/new" element={<AmenityTypeForm />} />
-        <Route path="types/amenity/edit/:id" element={<AmenityTypeForm />} />
-        
-        <Route path="types/room" element={<RoomTypeList />} />
-        <Route path="types/room/new" element={<RoomTypeForm />} />
-        <Route path="types/room/edit/:id" element={<RoomTypeForm />} />
+          {/* Gestión de Tipos - Movido arriba para priorizar el matching */}
+          <Route path="types-management" element={<TypesManagementPage />} />
+          
+          {/* Types Management Routes */}
+          <Route path="types/media" element={<MediaTypeList />} />
+          <Route path="types/media/new" element={<MediaTypeForm />} />
+          <Route path="types/media/edit/:id" element={<MediaTypeForm />} />
+          
+          <Route path="types/amenity" element={<AmenityTypeList />} />
+          <Route path="types/amenity/new" element={<AmenityTypeForm />} />
+          <Route path="types/amenity/edit/:id" element={<AmenityTypeForm />} />
+          
+          <Route path="types/room" element={<RoomTypeList />} />
+          <Route path="types/room/new" element={<RoomTypeForm />} />
+          <Route path="types/room/edit/:id" element={<RoomTypeForm />} />
 
-        {/* Listado de Hoteles */}
-        <Route path="hotel-list" element={<HotelList />} />
+          {/* Listado de Hoteles */}
+          <Route path="hotel-list" element={<HotelList />} />
 
-        {/* RUTAS DE AMENITIES */}
-        <Route path="amenities-list" element={<AmenityList />} />
-        <Route path="amenities/new" element={<AmenityNewForm />} />
-        <Route path="amenities/edit/:amenityId" element={<AmenityEditForm />} />
+          {/* RUTAS DE AMENITIES */}
+          <Route path="amenities-list" element={<AmenityList />} />
+          <Route path="amenities/new" element={<AmenityNewForm />} />
+          <Route path="amenities/edit/:amenityId" element={<AmenityEditForm />} />
 
-        {/* Rutas de Creación y Edición de Hoteles */}
-        <Route path="hotel">
-          <Route path="new" element={<HotelNewForm />} />
-          <Route path="edit/:hotelId" element={<HotelEditForm />} />
-          <Route path=":hotelId" element={<HotelManageLayout />}>
-            <Route index element={<HotelDetailsView />} />
-            <Route path="rooms" element={<RoomForm />} />
-            <Route path="contacts" element={<ContactForm />} />
-            <Route path="address" element={<AddressForm />} />
-            <Route path="media" element={<MediaForm />} />
-            <Route path="floorplans" element={<FloorPlanForm />} />
-            <Route path="*" element={<HotelSubSectionNotFound />} />
+          {/* Rutas de Creación y Edición de Hoteles */}
+          <Route path="hotel">
+            <Route path="new" element={<HotelNewForm />} />
+            <Route path="edit/:hotelId" element={<HotelEditForm />} />
+            <Route path=":hotelId" element={<HotelManageLayout />}>
+              <Route index element={<HotelDetailsView />} />
+              <Route path="rooms" element={<RoomForm />} />
+              <Route path="contacts" element={<ContactForm />} />
+              <Route path="address" element={<AddressForm />} />
+              <Route path="media" element={<MediaForm />} />
+              <Route path="floorplans" element={<FloorPlanForm />} />
+              <Route path="*" element={<HotelSubSectionNotFound />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
           </Route>
+
+          {/* Ruta 404 para cualquier otra URL no capturada */}
           <Route path="*" element={<NotFound />} />
         </Route>
-
-        {/* Ruta 404 para cualquier otra URL no capturada */}
-        <Route path="*" element={<NotFound />} />
-      </Route>
-    </Routes>
+      </Routes>
+      <EnvironmentIndicator />
+    </>
   );
 }
 

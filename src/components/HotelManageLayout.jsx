@@ -8,6 +8,7 @@ import {
   Tab,
   Loading, // Necesitamos Loading de nuevo para el nombre
 } from '@carbon/react';
+import { getApiBaseUrl } from '../services/config';
 
 // Estilos (sin cambios)
 const navLinkStyle = {
@@ -38,9 +39,9 @@ function HotelManageLayout() {
         return;
       }
       try {
-        // Llamada real a la API para obtener detalles (incluyendo el nombre)
+        const baseUrl = getApiBaseUrl();
         const response = await fetch(
-          `http://localhost:8090/api/hotels/${hotelId}`
+          `${baseUrl}/api/hotels/${hotelId}`
         );
         if (!response.ok) {
           if (response.status === 404)
