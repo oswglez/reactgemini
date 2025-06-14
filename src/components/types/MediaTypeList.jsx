@@ -15,6 +15,7 @@ import {
   Pagination
 } from '@carbon/react';
 import { AddFilled, Edit, TrashCan } from '@carbon/icons-react';
+import { getApiBaseUrl } from '../../services/config';
 
 // Styles
 const containerStyle = {
@@ -62,7 +63,8 @@ function MediaTypeList() {
     setDeleteSuccess(null);
 
     try {
-      const response = await fetch(`http://localhost:8090/api/mediaType?page=${page}&size=${size}`);
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/mediaType?page=${page}&size=${size}`);
       if (!response.ok) {
         throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch media types'}`);
       }
@@ -130,7 +132,8 @@ function MediaTypeList() {
     setDeleteSuccess(null);
 
     try {
-      const response = await fetch(`http://localhost:8090/api/mediaType/${typeToDeleteId}`, {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/mediaType/${typeToDeleteId}`, {
         method: 'DELETE'
       });
 
@@ -249,14 +252,15 @@ function MediaTypeList() {
                     <input
                       type="checkbox"
                       checked={selectedRows.has(type.id)}
-                      onChange={(event) => {
-                        const newSelectedRows = new Set(selectedRows);
-                        if (event.target.checked) {
-                          newSelectedRows.add(type.id);
-                        } else {
-                          newSelectedRows.delete(type.id);
-                        }
-                        setSelectedRows(newSelectedRows);
+                      onChange={() => {
+                        setSelectedRows(prevSelectedRows => {
+                          // If the clicked row is already selected, deselect it
+                          if (prevSelectedRows.has(type.id)) {
+                            return new Set();
+                          }
+                          // Otherwise, select only the clicked row
+                          return new Set([type.id]);
+                        });
                       }}
                     />
                   </TableCell>

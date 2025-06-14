@@ -126,30 +126,16 @@ function HotelList() {
 
   const handleRowCheckboxChange = (rowId) => {
     setSelectedRows(prevSelectedRows => {
-      const newSelectedRows = new Set(prevSelectedRows);
-      if (newSelectedRows.has(rowId)) {
-        newSelectedRows.delete(rowId);
-      } else {
-        newSelectedRows.add(rowId);
+      // If the clicked row is already selected, deselect it
+      if (prevSelectedRows.has(rowId)) {
+        return new Set();
       }
-      return newSelectedRows;
+      // Otherwise, select only the clicked row
+      return new Set([rowId]);
     });
   };
 
   const isRowSelected = (rowId) => selectedRows.has(rowId);
-
-  const handleSelectAll = (event) => {
-    if (event.target.checked) {
-      const allRowIds = new Set(tableRows.map(row => row.id));
-      setSelectedRows(allRowIds);
-    } else {
-      setSelectedRows(new Set());
-    }
-  };
-
-  const areAllRowsSelected = tableRows.length > 0 && selectedRows.size === tableRows.length;
-  const isIndeterminate = selectedRows.size > 0 && selectedRows.size < tableRows.length;
-
 
   // --- Funciones para el borrado ---
   const openDeleteModal = () => {
@@ -299,7 +285,7 @@ function HotelList() {
                     <TableHead>
                       <TableRow>
                         {dtHeaders.map((header) => {
-                          const { key: carbonGeneratedKey, ...restOfHeaderProps } = getHeaderProps({ header });
+                          const { ...restOfHeaderProps } = getHeaderProps({ header });
                           return (
                             <TableHeader
                               key={header.key}
@@ -312,15 +298,7 @@ function HotelList() {
                               style={{ ...header.style, ...(restOfHeaderProps.style || {}) }}
                               isSortable={header.isSortable}
                             >
-                              {header.header === 'select' && hotels.length > 0 ? ( // Para el checkbox de seleccionar todos
-                                <Checkbox
-                                  id="select-all-checkbox"
-                                  labelText=""
-                                  onChange={handleSelectAll}
-                                  checked={areAllRowsSelected}
-                                  indeterminate={isIndeterminate}
-                                />
-                              ) : header.header}
+                              {header.header === 'select' ? '' : header.header}
                               {header.isSortable && header.header !== 'select' && (
                                 <span style={{ marginLeft: '8px' }}>{getSortIcon(header.key)}</span>
                               )}
