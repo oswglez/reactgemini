@@ -4,6 +4,9 @@ import {
   Loading,
   InlineNotification,
   Button,
+  Checkbox,
+  Pagination,
+  DataTable,
   TableContainer,
   Table,
   TableHead,
@@ -11,10 +14,10 @@ import {
   TableHeader,
   TableBody,
   TableCell,
-  Modal,
-  Pagination
+  Modal
 } from '@carbon/react';
 import { AddFilled, Edit, TrashCan } from '@carbon/icons-react';
+import { getApiBaseUrl } from '../../services/config';
 
 // Styles
 const containerStyle = {
@@ -54,6 +57,26 @@ function RoomTypeList() {
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(null);
 
+  // DataTable headers y rows
+  const dataTableHeaders = [
+    { key: 'select', header: '', isSortable: false, style: { width: '60px' } },
+    { key: 'roomTypeId', header: 'ID', isSortable: false, style: { width: '100px' } },
+    { key: 'roomTypeName', header: 'Name', isSortable: false, style: { width: '200px' } },
+    { key: 'roomTypeDescription', header: 'Description', isSortable: false, style: { width: 'auto' } },
+  ];
+  const tableRows = roomTypes.map(type => ({ ...type, id: type.roomTypeId.toString() }));
+
+  // Selección exclusiva tipo radio
+  const handleRowCheckboxChange = (rowId) => {
+    setSelectedRows(prevSelectedRows => {
+      if (prevSelectedRows.has(rowId)) {
+        return new Set();
+      }
+      return new Set([rowId]);
+    });
+  };
+  const isRowSelected = (rowId) => selectedRows.has(rowId);
+
   // Fetch Room Types
   const fetchRoomTypes = useCallback(async (page, size) => {
     setLoading(true);
@@ -62,7 +85,8 @@ function RoomTypeList() {
     setDeleteSuccess(null);
 
     try {
-      const response = await fetch(`http://localhost:8090/api/roomType?page=${page}&size=${size}`);
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/roomType?page=${page}&size=${size}`);
       if (!response.ok) {
         throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch room types'}`);
       }
@@ -130,7 +154,8 @@ function RoomTypeList() {
     setDeleteSuccess(null);
 
     try {
-      const response = await fetch(`http://localhost:8090/api/roomType/${typeToDeleteId}`, {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/roomType/${typeToDeleteId}`, {
         method: 'DELETE'
       });
 
@@ -232,42 +257,53 @@ function RoomTypeList() {
       )}
 
       {!loading && !error && (
-        <TableContainer>
-          <Table size="lg" useZebraStyles={false}>
-            <TableHead>
-              <TableRow>
-                <TableHeader />
-                <TableHeader>ID</TableHeader>
-                <TableHeader>Name</TableHeader>
-                <TableHeader>Description</TableHeader>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {roomTypes.map((type) => (
-                <TableRow key={type.id} selected={selectedRows.has(type.id)}>
-                  <TableCell>
-                    <input
-                      type="checkbox"
-                      checked={selectedRows.has(type.id)}
-                      onChange={(event) => {
-                        const newSelectedRows = new Set(selectedRows);
-                        if (event.target.checked) {
-                          newSelectedRows.add(type.id);
-                        } else {
-                          newSelectedRows.delete(type.id);
+        <DataTable rows={tableRows} headers={dataTableHeaders}>
+          {({ rows: dtRows, headers: dtHeaders, getHeaderProps, getRowProps, getTableProps }) => (
+            <TableContainer style={{ background: '#fff' }}>
+              <Table {...getTableProps()} size="md" useZebraStyles={false}>
+                <TableHead>
+                  <TableRow>
+                    {dtHeaders.map((header) => {
+                      const { ...restOfHeaderProps } = getHeaderProps({ header });
+                      return (
+                        <TableHeader
+                          key={header.key}
+                          {...restOfHeaderProps}
+                          style={header.style}
+                        >
+                          {header.header === 'select' ? '' : header.header}
+                        </TableHeader>
+                      );
+                    })}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {dtRows.map((row) => (
+                    <TableRow {...getRowProps({ row })} key={row.id} className={isRowSelected(row.id) ? 'cds--data-table--selected' : ''}>
+                      {row.cells.map((cell) => {
+                        if (cell.info.header === 'select') {
+                          return (
+                            <TableCell key={cell.id}>
+                              <Checkbox
+                                id={`checkbox-${row.id}`}
+                                labelText=""
+                                onChange={() => handleRowCheckboxChange(row.id)}
+                                checked={isRowSelected(row.id)}
+                              />
+                            </TableCell>
+                          );
                         }
-                        setSelectedRows(newSelectedRows);
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>{type.roomTypeId}</TableCell>
-                  <TableCell>{type.roomTypeName}</TableCell>
-                  <TableCell>{type.roomTypeDescription}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                        return (
+                          <TableCell key={cell.id}>{cell.value !== null && cell.value !== undefined ? cell.value.toString() : 'N/A'}</TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DataTable>
       )}
 
       {totalElements > 0 && roomTypes.length > 0 && (

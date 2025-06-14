@@ -4,6 +4,9 @@ import {
   Loading,
   InlineNotification,
   Button,
+  Checkbox,
+  Pagination,
+  DataTable,
   TableContainer,
   Table,
   TableHead,
@@ -11,10 +14,10 @@ import {
   TableHeader,
   TableBody,
   TableCell,
-  Modal,
-  Pagination
+  Modal
 } from '@carbon/react';
 import { AddFilled, Edit, TrashCan } from '@carbon/icons-react';
+import { getApiBaseUrl } from '../../services/config';
 
 // Styles
 const containerStyle = {
@@ -54,6 +57,26 @@ function MediaTypeList() {
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(null);
 
+  // DataTable headers y rows
+  const dataTableHeaders = [
+    { key: 'select', header: '', isSortable: false, style: { width: '60px' } },
+    { key: 'mediaTypeId', header: 'ID', isSortable: false, style: { width: '100px' } },
+    { key: 'mediaTypeName', header: 'Name', isSortable: false, style: { width: '200px' } },
+    { key: 'mediaTypeDescription', header: 'Description', isSortable: false, style: { width: 'auto' } },
+  ];
+  const tableRows = mediaTypes.map(type => ({ ...type, id: type.mediaTypeId.toString() }));
+
+  // Selección exclusiva tipo radio
+  const handleRowCheckboxChange = (rowId) => {
+    setSelectedRows(prevSelectedRows => {
+      if (prevSelectedRows.has(rowId)) {
+        return new Set();
+      }
+      return new Set([rowId]);
+    });
+  };
+  const isRowSelected = (rowId) => selectedRows.has(rowId);
+
   // Fetch Media Types
   const fetchMediaTypes = useCallback(async (page, size) => {
     setLoading(true);
@@ -62,7 +85,8 @@ function MediaTypeList() {
     setDeleteSuccess(null);
 
     try {
-      const response = await fetch(`http://localhost:8090/api/mediaType?page=${page}&size=${size}`);
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/mediaType?page=${page}&size=${size}`);
       if (!response.ok) {
         throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch media types'}`);
       }
@@ -130,7 +154,8 @@ function MediaTypeList() {
     setDeleteSuccess(null);
 
     try {
-      const response = await fetch(`http://localhost:8090/api/mediaType/${typeToDeleteId}`, {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/mediaType/${typeToDeleteId}`, {
         method: 'DELETE'
       });
 
@@ -232,42 +257,53 @@ function MediaTypeList() {
       )}
 
       {!loading && !error && (
-        <TableContainer>
-          <Table size="lg" useZebraStyles={false}>
-            <TableHead>
-              <TableRow>
-                <TableHeader />
-                <TableHeader>ID</TableHeader>
-                <TableHeader>Name</TableHeader>
-                <TableHeader>Description</TableHeader>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {mediaTypes.map((type) => (
-                <TableRow key={type.id} selected={selectedRows.has(type.id)}>
-                  <TableCell>
-                    <input
-                      type="checkbox"
-                      checked={selectedRows.has(type.id)}
-                      onChange={(event) => {
-                        const newSelectedRows = new Set(selectedRows);
-                        if (event.target.checked) {
-                          newSelectedRows.add(type.id);
-                        } else {
-                          newSelectedRows.delete(type.id);
+        <DataTable rows={tableRows} headers={dataTableHeaders}>
+          {({ rows: dtRows, headers: dtHeaders, getHeaderProps, getRowProps, getTableProps }) => (
+            <TableContainer style={{ background: '#fff' }}>
+              <Table {...getTableProps()} size="md" useZebraStyles={false}>
+                <TableHead>
+                  <TableRow>
+                    {dtHeaders.map((header) => {
+                      const { ...restOfHeaderProps } = getHeaderProps({ header });
+                      return (
+                        <TableHeader
+                          key={header.key}
+                          {...restOfHeaderProps}
+                          style={header.style}
+                        >
+                          {header.header === 'select' ? '' : header.header}
+                        </TableHeader>
+                      );
+                    })}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {dtRows.map((row) => (
+                    <TableRow {...getRowProps({ row })} key={row.id} className={isRowSelected(row.id) ? 'cds--data-table--selected' : ''}>
+                      {row.cells.map((cell) => {
+                        if (cell.info.header === 'select') {
+                          return (
+                            <TableCell key={cell.id}>
+                              <Checkbox
+                                id={`checkbox-${row.id}`}
+                                labelText=""
+                                onChange={() => handleRowCheckboxChange(row.id)}
+                                checked={isRowSelected(row.id)}
+                              />
+                            </TableCell>
+                          );
                         }
-                        setSelectedRows(newSelectedRows);
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>{type.mediaTypeId}</TableCell>
-                  <TableCell>{type.mediaTypeName}</TableCell>
-                  <TableCell>{type.mediaTypeDescription}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                        return (
+                          <TableCell key={cell.id}>{cell.value !== null && cell.value !== undefined ? cell.value.toString() : 'N/A'}</TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DataTable>
       )}
 
       {totalElements > 0 && mediaTypes.length > 0 && (
