@@ -29,6 +29,9 @@ import AmenityTypeList from './components/types/AmenityTypeList';
 import AmenityTypeForm from './components/types/AmenityTypeForm';
 import RoomTypeList from './components/types/RoomTypeList';
 import RoomTypeForm from './components/types/RoomTypeForm';
+import RoomEditForm from './components/RoomEditForm';
+import RoomList from './components/RoomList';
+import RoomNewForm from './components/RoomNewForm';
 
 // Componentes 404
 const NotFound = () => (
@@ -96,6 +99,11 @@ function App() {
             </Route>
             <Route path="*" element={<NotFound />} />
           </Route>
+          {/* Rutas de Creación y Edición de Rooms */}
+          <Route path="/hotels/:hotelId/rooms" element={<RoomList />} />
+          <Route path="/rooms/edit/:roomId" element={<RoomEditForm />} />
+          <Route path="/hotels/:hotelId/rooms/new" element={<RoomNewForm />} />
+
 
           {/* Ruta 404 para cualquier otra URL no capturada */}
           <Route path="*" element={<NotFound />} />

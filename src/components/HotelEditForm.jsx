@@ -13,6 +13,7 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
+  NumberInput,
 } from '@carbon/react';
 import { getData as getCountryDataList } from 'country-list';
 import {
@@ -100,6 +101,8 @@ function HotelEditForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [openCancelModal, setOpenCancelModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
+
+  const [floor, setFloor] = useState(0);
 
   useEffect(() => {
     try {
@@ -211,6 +214,7 @@ function HotelEditForm() {
           selectedHotelStatus: hotelStatusItems.find(item => item.id === data.hotelStatus) || null,
           website: data.hotelWebsiteUrl || '',
           disclaimer: data.disclaimer || '',
+          floor: data.floor !== undefined && data.floor !== null ? data.floor : 0,
         };
 
         // Handle address data
@@ -295,6 +299,7 @@ function HotelEditForm() {
           setSelectedHotelStatus(updates.selectedHotelStatus);
           setWebsite(updates.website);
           setDisclaimer(updates.disclaimer);
+          setFloor(updates.floor);
           
           if (updates.streetAddress !== undefined) {
             setStreetAddress(updates.streetAddress);
@@ -430,6 +435,7 @@ function HotelEditForm() {
     setSelectedHotelStatus(statusItem || null);
     setWebsite(data.hotelWebsiteUrl || '');
     setDisclaimer(data.disclaimer || '');
+    setFloor(data.floor !== undefined && data.floor !== null ? data.floor : 0);
   
     let hotelCountryCode = null;
     if (data.mainAddress) {
@@ -492,6 +498,7 @@ function HotelEditForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Submitting', formData);
     if (!validateForm()) return;
     setIsSubmitting(true);
     setFeedback({ type: '', message: '' });
@@ -533,6 +540,7 @@ function HotelEditForm() {
         postalCode: zipCode || null,
         addressType: 'MAIN',
       },
+      floor: floor !== undefined && floor !== null ? floor : 0,
     };
     console.log('Submitting Update Form Data to Backend:', JSON.stringify(payload, null, 2));
 

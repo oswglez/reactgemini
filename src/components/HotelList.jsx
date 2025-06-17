@@ -215,6 +215,19 @@ function HotelList() {
           <Button
             kind="secondary"
             style={actionButtonStyle}
+            disabled={selectedRows.size !== 1}
+            onClick={() => {
+              if (selectedRows.size === 1) {
+                const selectedHotelId = Array.from(selectedRows)[0];
+                navigate(`/hotels/${selectedHotelId}/rooms`);
+              }
+            }}
+          >
+            View Rooms
+          </Button>
+          <Button
+            kind="secondary"
+            style={actionButtonStyle}
             disabled={selectedRows.size !== 1} // Habilitado solo si una fila está seleccionada
             onClick={() => {
               if (selectedRows.size === 1) {
@@ -285,10 +298,10 @@ function HotelList() {
                     <TableHead>
                       <TableRow>
                         {dtHeaders.map((header) => {
-                          const { ...restOfHeaderProps } = getHeaderProps({ header });
+                          const { key, ...restOfHeaderProps } = getHeaderProps({ header });
                           return (
                             <TableHeader
-                              key={header.key}
+                              key={key}
                               {...restOfHeaderProps}
                               onClick={() => {
                                 if (header.isSortable) {

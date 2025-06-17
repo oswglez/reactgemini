@@ -264,10 +264,10 @@ function RoomTypeList() {
                 <TableHead>
                   <TableRow>
                     {dtHeaders.map((header) => {
-                      const { ...restOfHeaderProps } = getHeaderProps({ header });
+                      const { key, ...restOfHeaderProps } = getHeaderProps({ header });
                       return (
                         <TableHeader
-                          key={header.key}
+                          key={key}
                           {...restOfHeaderProps}
                           style={header.style}
                         >
