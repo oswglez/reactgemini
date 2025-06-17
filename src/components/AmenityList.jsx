@@ -292,7 +292,7 @@ function AmenityList() {
                     <TableHead>
                       <TableRow>
                         {headers.map((header) => {
-                          const { key, ...restOfHeaderProps } = getHeaderProps({ header });
+                          const { ...restOfHeaderProps } = getHeaderProps({ header });
                           return (
                             <TableHeader
                               key={header.key}

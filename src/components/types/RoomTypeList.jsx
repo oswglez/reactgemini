@@ -156,6 +156,7 @@ function RoomTypeList() {
     try {
       const baseUrl = getApiBaseUrl();
       const response = await fetch(`${baseUrl}/api/roomType/${typeToDeleteId}`, {
+
         method: 'DELETE'
       });
 

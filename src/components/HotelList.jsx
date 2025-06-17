@@ -298,10 +298,10 @@ function HotelList() {
                     <TableHead>
                       <TableRow>
                         {dtHeaders.map((header) => {
-                          const { key, ...restOfHeaderProps } = getHeaderProps({ header });
+                          const { ...restOfHeaderProps } = getHeaderProps({ header });
                           return (
                             <TableHeader
-                              key={key}
+                              key={header.key}
                               {...restOfHeaderProps}
                               onClick={() => {
                                 if (header.isSortable) {
