@@ -5,9 +5,13 @@ import {
   Loading, InlineNotification, Button, Checkbox, Pagination, DataTable,
   TableContainer, Table, TableHead, TableRow, TableHeader, TableBody, TableCell,
   Modal,
+  Search,
+  Grid,
+  Column
 } from '@carbon/react';
-import { AddFilled, ArrowUp, ArrowDown, TrashCan, Edit } from '@carbon/icons-react';
+import { AddFilled, ArrowUp, ArrowDown, TrashCan, Edit, View } from '@carbon/icons-react';
 import { getApiBaseUrl } from '../services/config';
+import { useAuthenticatedFetch } from '../services/apiService';
 
 // Estilos (similares a HotelList, ajusta si es necesario)
 const containerStyle = { marginTop: '1rem', width: '100%', padding: '20px', backgroundColor: '#f9f9f9' };
@@ -24,8 +28,11 @@ function AmenityList() {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
   const [totalElements, setTotalElements] = useState(0);
-  const [sortColumn, setSortColumn] = useState('amenityCode');
+  const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('ASC');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const authenticatedFetch = useAuthenticatedFetch();
 
   // Estados para el modal de eliminación
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -40,13 +47,12 @@ function AmenityList() {
     setDeleteSuccess(null);
 
     try {
-      const baseUrl = getApiBaseUrl();
-      let url = `${baseUrl}/api/amenities?page=${page}&size=${size}`;
+      let url = `/amenities?page=${page}&size=${size}`;
       if (column && direction) {
         url += `&sort=${column},${direction.toLowerCase()}`;
       }
       console.log('Fetching URL:', url);
-      const response = await fetch(url);
+      const response = await authenticatedFetch(url);
       if (!response.ok) {
         const errorBody = await response.text();
         throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch amenities'}. Body: ${errorBody}`);
@@ -74,7 +80,7 @@ function AmenityList() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authenticatedFetch]);
 
   useEffect(() => {
     console.log('useEffect triggered with:', { currentPage, pageSize, sortColumn, sortDirection });
@@ -83,6 +89,7 @@ function AmenityList() {
 
   // --- Sort Handlers ---
   const handleSort = useCallback((columnKey) => {
+    console.log(`handleSort (called by DataTable) for column: ${columnKey}`);
     if (sortColumn === columnKey) {
       setSortDirection(prevDirection => (prevDirection === 'ASC' ? 'DESC' : 'ASC'));
     } else {
@@ -175,28 +182,84 @@ function AmenityList() {
     setDeleteSuccess(null);
 
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/amenities/${amenityToDeleteId}`, {
-        method: 'DELETE',
+      const response = await authenticatedFetch(`/amenities/${amenityToDeleteId}`, {
+        method: 'DELETE'
       });
 
       if (!response.ok) {
         const errorBody = await response.text();
-        throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not delete amenity'}. Body: ${errorBody}`);
+        throw new Error(`HTTP Error ${response.status}: ${errorBody || 'Could not delete amenity'}`);
       }
 
-      setDeleteSuccess('Amenity deleted successfully.');
+      setDeleteSuccess('Amenity deleted successfully');
       closeDeleteModal();
       setSelectedRows(new Set());
       fetchAmenities(currentPage, pageSize, sortColumn, sortDirection);
 
     } catch (err) {
       console.error('Error deleting amenity:', err);
-      setDeleteError(err.message || 'Could not delete amenity. Please try again.');
+      setDeleteError(err.message || 'Could not delete amenity');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleSearch = (event) => {
+    setSearchTerm(event.target.value);
+    setCurrentPage(0); // Reset to first page when searching
+  };
+
+  // Filter amenities based on search term
+  const filteredAmenities = amenities.filter(amenity =>
+    amenity.amenityCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    amenity.amenityDescription?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    amenity.amenityType?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const headers = [
+    { key: 'amenityCode', header: 'Amenity Code' },
+    { key: 'amenityDescription', header: 'Description' },
+    { key: 'amenityType', header: 'Type' },
+    { key: 'actions', header: 'Actions' }
+  ];
+
+  const rows = filteredAmenities.map(amenity => ({
+    id: amenity.id,
+    amenityCode: amenity.amenityCode || 'N/A',
+    amenityDescription: amenity.amenityDescription || 'N/A',
+    amenityType: amenity.amenityType || 'N/A',
+    actions: (
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <Button
+          kind="ghost"
+          size="sm"
+          iconDescription="View"
+          hasIconOnly
+          onClick={() => navigate(`/amenities/${amenity.amenityId}`)}
+        >
+          <View />
+        </Button>
+        <Button
+          kind="ghost"
+          size="sm"
+          iconDescription="Edit"
+          hasIconOnly
+          onClick={() => navigate(`/amenities/edit/${amenity.amenityId}`)}
+        >
+          <Edit />
+        </Button>
+        <Button
+          kind="ghost"
+          size="sm"
+          iconDescription="Delete"
+          hasIconOnly
+          onClick={() => handleDeleteConfirm()}
+        >
+          <TrashCan />
+        </Button>
+      </div>
+    )
+  }));
 
   return (
     <div style={containerStyle}>
@@ -285,7 +348,7 @@ function AmenityList() {
           {amenities.length === 0 ? (
             <p style={{ textAlign: 'center', marginTop: '2rem' }}>No amenities registered yet.</p>
           ) : (
-            <DataTable rows={tableRows} headers={dataTableHeaders} isSortable>
+            <DataTable rows={rows} headers={headers} isSortable>
               {({ rows, headers, getHeaderProps, getRowProps, getTableProps }) => (
                 <TableContainer>
                   <Table {...getTableProps()} size="md" useZebraStyles={false}>
