@@ -1,6 +1,10 @@
 // src/App.jsx (Configuración Reconciliada y Corregida)
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedApp from "./components/ProtectedApp";
+import { useAuth0 } from "@auth0/auth0-react";
+import LogoutButton from "./components/LogoutButton";
+import UserProfile from "./components/UserProfile";
 
 // Layouts
 import AppLayout from './components/AppLayout';
@@ -17,7 +21,6 @@ import RoomForm from './components/RoomForm';
 import ContactForm from './components/ContactForm';
 import AddressForm from './components/AddressForm';
 import AmenityList from './components/AmenityList';
-import AmenityForm from './components/AmenityForm';
 import AmenityEditForm from './components/AmenityEditForm';
 import AmenityNewForm from './components/AmenityNewForm';
 import MediaForm from './components/MediaForm';
@@ -49,8 +52,25 @@ const HotelSubSectionNotFound = () => (
 );
 
 function App() {
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+
+  const callApiWithToken = async () => {
+    const token = await getAccessTokenSilently();
+    // Use the token in your API request
+    await fetch("https://your-api.com/protected", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    // handle response...
+  };
+
   return (
-    <>
+    <ProtectedApp>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "1rem" }}>
+        <UserProfile />
+        <LogoutButton />
+      </div>
       <Routes>
         {/* Layout Principal - AppLayout */}
         <Route path="/" element={<AppLayout />}>
@@ -110,7 +130,12 @@ function App() {
         </Route>
       </Routes>
       <EnvironmentIndicator />
-    </>
+      {isAuthenticated && (
+        <div>
+          <button onClick={callApiWithToken}>Call Protected API</button>
+        </div>
+      )}
+    </ProtectedApp>
   );
 }
 

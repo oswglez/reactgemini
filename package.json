@@ -15,9 +15,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@carbon/icons-react": "^11.61.0",
+    "@auth0/auth0-react": "^2.3.0",
+    "@carbon/icons-react": "^11.62.0",
     "@carbon/react": "^1.84.0",
     "@carbon/styles": "^1.78.0",
+    "carbon-components-react": "^7.60.2",
+    "carbon-icons": "^7.0.7",
     "country-list": "^2.3.0",
     "libphonenumber-js": "^1.12.8",
     "react": "^19.0.0",
