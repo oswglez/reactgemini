@@ -19,10 +19,9 @@ import {
   AsYouType,
   getExampleNumber,
   parsePhoneNumberFromString,
-  getCountryCallingCode,
-  isValidPhoneNumber,
+  getCountryCallingCode
 } from 'libphonenumber-js';
-import { getApiBaseUrl } from '../services/config';
+import { useAuthenticatedFetch } from '../services/apiService';
 
 // --- Estilos (sin cambios) ---
 const formContainerStyle = {
@@ -80,6 +79,7 @@ const createNoItemsItem = (idSuffix, text) => ({ id: `no-items-${idSuffix}`, tex
 
 function HotelNewForm() {
   const navigate = useNavigate();
+  const authenticatedFetch = useAuthenticatedFetch();
 
   const [chains, setChains] = useState([createLoadingItem('chains', 'chains')]);
   const [selectedChain, setSelectedChain] = useState(null);
@@ -144,8 +144,7 @@ function HotelNewForm() {
   const fetchChainsData = useCallback(async () => {
     setLoadingChains(true);
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/chain`);
+      const response = await authenticatedFetch(`/chain`);
       if (!response.ok) throw new Error('Network response for chains was not ok');
       const data = await response.json();
       setChains([
@@ -159,7 +158,7 @@ function HotelNewForm() {
     } finally {
       setLoadingChains(false);
     }
-  }, []);
+  }, [authenticatedFetch]);
 
   useEffect(() => {
     fetchChainsData();
@@ -171,8 +170,7 @@ function HotelNewForm() {
         setLoadingBrands(true);
         setBrands([createLoadingItem('brands', 'brands')]);
         try {
-          const baseUrl = getApiBaseUrl();
-          const response = await fetch(`${baseUrl}/api/chain/${selectedChain.id}/brands`);
+          const response = await authenticatedFetch(`/chain/${selectedChain.id}/brands`);
           if (!response.ok) throw new Error('Network response for brands was not ok');
           const data = await response.json();
           setBrands(data && data.length > 0 ?
@@ -192,7 +190,7 @@ function HotelNewForm() {
       setBrands([createSelectChainFirstItem()]);
     }
     setSelectedBrand(null);
-  }, [selectedChain]);
+  }, [selectedChain, authenticatedFetch]);
 
   const handlePhoneNumberChange = (e, countryCodeISO, setRawValue, setFormattedValue, setErrorValue) => {
     const rawValue = e.target.value;
@@ -357,8 +355,7 @@ function HotelNewForm() {
     console.log('Submitting Form Data to Backend:', JSON.stringify(formData, null, 2));
 
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/hotels/createFull`, {
+      const response = await authenticatedFetch('/hotels/createFull', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

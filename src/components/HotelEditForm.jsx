@@ -23,7 +23,7 @@ import {
   getCountryCallingCode,
 } from 'libphonenumber-js';
 import ReactDOM from 'react-dom';
-import { getApiBaseUrl } from '../services/config';
+import { useAuthenticatedFetch } from '../services/apiService';
 
 
 // --- Estilos (copiados de versiones anteriores, asegúrate que sean los correctos para ti) ---
@@ -104,6 +104,8 @@ function HotelEditForm() {
 
   const [floor, setFloor] = useState(0);
 
+  const authenticatedFetch = useAuthenticatedFetch();
+
   useEffect(() => {
     try {
       const rawCountries = getCountryDataList();
@@ -129,11 +131,9 @@ function HotelEditForm() {
     const loadChains = async () => {
       setLoadingChains(true);
       try {
-        const baseUrl = getApiBaseUrl();
-        const response = await fetch(`${baseUrl}/api/chain`);
+        const response = await authenticatedFetch(`/chain`);
         if (!response.ok) throw new Error('Network response for chains was not ok');
         const data = await response.json();
-        
         const chainItems = [
           createPlaceholderItem('chain', 'chain'),
           ...data.map(c => ({ id: c.chainId.toString(), text: c.chainName }))
@@ -149,7 +149,7 @@ function HotelEditForm() {
     };
 
     loadChains();
-  }, []);
+  }, [authenticatedFetch]);
 
   const fetchBrandsForChain = useCallback(async (chainId) => {
     if (!chainId || String(chainId).startsWith('placeholder-')) {
@@ -160,8 +160,7 @@ function HotelEditForm() {
     setLoadingBrands(true);
     setBrands([createLoadingItem('brands', 'brands')]);
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/chain/${chainId}/brands`);
+      const response = await authenticatedFetch(`/chain/${chainId}/brands`);
       if (!response.ok) throw new Error('Network response for brands was not ok');
       const data = await response.json();
       const brandItemsList = data && data.length > 0 ?
@@ -176,7 +175,7 @@ function HotelEditForm() {
     } finally {
       setLoadingBrands(false);
     }
-  }, []);
+  }, [authenticatedFetch]);
 
   // Cargar datos del hotel
   useEffect(() => {
@@ -190,9 +189,8 @@ function HotelEditForm() {
       setInitialDataLoading(true);
 
       try {
-        const baseUrl = getApiBaseUrl();
-        const apiUrl = `${baseUrl}/api/hotels/${hotelId}/withRelations`;
-        const hotelResponse = await fetch(apiUrl);
+        const apiUrl = `/hotels/${hotelId}/withRelations`;
+        const hotelResponse = await authenticatedFetch(apiUrl);
 
         if (!hotelResponse.ok) {
           if (hotelResponse.status === 404) {
@@ -268,7 +266,7 @@ function HotelEditForm() {
             updates.selectedChain = chainItem;
             
             try {
-              const brandsResponse = await fetch(`${baseUrl}/api/chain/${data.chainId}/brands`);
+              const brandsResponse = await authenticatedFetch(`/chain/${data.chainId}/brands`);
               if (brandsResponse.ok) {
                 const brandsData = await brandsResponse.json();
                 const brandItems = [
@@ -351,7 +349,7 @@ function HotelEditForm() {
     if (chains.length > 1 && countryDropdownItems.length > 1) {
       fetchHotelData();
     }
-  }, [hotelId, chains, countryDropdownItems]); // Agregamos las dependencias necesarias
+  }, [hotelId, chains, countryDropdownItems, authenticatedFetch]); // Agregamos las dependencias necesarias
 
   const validatePhoneNumber = (numberRaw, countryCodeISO, fieldName, setErrorFunc) => {
     if (!numberRaw || numberRaw.trim() === '') {
@@ -498,7 +496,6 @@ function HotelEditForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Submitting', formData);
     if (!validateForm()) return;
     setIsSubmitting(true);
     setFeedback({ type: '', message: '' });
@@ -545,8 +542,7 @@ function HotelEditForm() {
     console.log('Submitting Update Form Data to Backend:', JSON.stringify(payload, null, 2));
 
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/hotels/updateWithDetails/${hotelId}`, {
+      const response = await authenticatedFetch(`/hotels/updateWithDetails/${hotelId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -577,8 +573,7 @@ function HotelEditForm() {
     setIsSubmitting(true); 
     setFeedback({ type: '', message: '' });
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/hotels/${hotelId}/soft-delete`, {
+      const response = await authenticatedFetch(`/hotels/${hotelId}/soft-delete`, {
         method: 'PUT',
       });
       if (!response.ok) {

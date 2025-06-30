@@ -4,12 +4,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Loading, InlineNotification, Button, Checkbox, Pagination, DataTable,
   TableContainer, Table, TableHead, TableRow, TableHeader, TableBody, TableCell,
-  Modal, // Importa Modal
+  Modal, // Import Modal
 } from '@carbon/react';
-import { AddFilled, ArrowUp, ArrowDown, TrashCan } from '@carbon/icons-react'; // Importa TrashCan
-import { getApiBaseUrl } from '../services/config';
+import { AddFilled, ArrowUp, ArrowDown, TrashCan } from '@carbon/icons-react'; // Import TrashCan
+import { useAuthenticatedFetch } from '../services/apiService';
 
-// ... (estilos y decodeHotelStatus sin cambios)
+// ... (styles and decodeHotelStatus without changes)
 const containerStyle = { marginTop: '1rem', width: '100%', padding: '20px', backgroundColor: '#f9f9f9' };
 const actionButtonStyle = { marginRight: '0.5rem' };
 const headerButtonContainerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' };
@@ -37,20 +37,23 @@ function HotelList() {
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(null);
 
-  // Memoizar la función de fetch para evitar recreaciones innecesarias
+  const authenticatedFetch = useAuthenticatedFetch();
+
+  // Memoize the fetch function to avoid unnecessary recreations
   const fetchHotels = useCallback(async () => {
     setLoading(true);
     setError(null);
     setDeleteError(null);
     setDeleteSuccess(null);
     try {
-      const baseUrl = getApiBaseUrl();
-      let url = `${baseUrl}/api/hotels/hotelList?page=${currentPage}&size=${pageSize}`;
+      let url = `/hotels/hotelList?page=${currentPage}&size=${pageSize}`;
       if (sortColumn && sortDirection) {
-        url += `&sort=${sortColumn},${sortDirection.toLowerCase()}`;
+        // Map contactName to contactLastName for API sorting
+        const apiSortColumn = sortColumn === 'contactName' ? 'contactLastName' : sortColumn;
+        url += `&sort=${apiSortColumn},${sortDirection.toLowerCase()}`;
       }
       console.log('Fetching URL:', url);
-      const response = await fetch(url);
+      const response = await authenticatedFetch(url);
       if (!response.ok) {
         const errorBody = await response.text();
         throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch list'}. Body: ${errorBody}`);
@@ -69,15 +72,16 @@ function HotelList() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, sortColumn, sortDirection]); // Incluir todas las dependencias necesarias
+  }, [currentPage, pageSize, sortColumn, sortDirection, authenticatedFetch]); // Include authenticatedFetch as dependency
 
-  // Usar useEffect sin fetchHotels como dependencia
+  // Use useEffect without fetchHotels as dependency
   useEffect(() => {
     fetchHotels();
-  }, [fetchHotels]); // fetchHotels ya incluye las dependencias necesarias
+  }, [fetchHotels]); // fetchHotels already includes the necessary dependencies
 
   const handleSort = useCallback((columnKey) => {
     console.log(`handleSort (called by DataTable) for column: ${columnKey}`);
+    
     if (sortColumn === columnKey) {
       setSortDirection(prevDirection => (prevDirection === 'ASC' ? 'DESC' : 'ASC'));
     } else {
@@ -106,13 +110,16 @@ function HotelList() {
     { key: 'hotelCity', header: 'City', isSortable: true, style: { width: '120px' } },
     { key: 'hotelState', header: 'State', isSortable: true, style: { width: '100px' } },
     { key: 'hotelCountry', header: 'Country', isSortable: true, style: { width: '100px' } },
-    { key: 'contactFirstName', header: 'Contact First', isSortable: true, style: { width: '130px' } },
-    { key: 'contactLastName', header: 'Contact Last', isSortable: true, style: { width: '130px' } },
+    { key: 'contactName', header: 'Contact Name', isSortable: true, style: { width: '200px' } },
     { key: 'contactTitle', header: 'Title', isSortable: true, style: { width: '150px' } },
     { key: 'hotelWebsiteUrl', header: 'Website', isSortable: false, style: { width: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } },
     { key: 'hotelStatus', header: 'Status', isSortable: true, style: { width: '100px' } },
   ];
-  const tableRows = hotels.map(hotel => ({ ...hotel, id: hotel.hotelId.toString() }));
+  const tableRows = hotels.map(hotel => ({ 
+    ...hotel, 
+    id: hotel.hotelId.toString(),
+    contactName: `${hotel.contactLastName || ''}, ${hotel.contactFirstName || ''}`.trim() || 'N/A'
+  }));
 
   const handlePaginationChange = ({ page, pageSize: newPageSize }) => {
     const newRequestedPage = page - 1;
@@ -137,14 +144,14 @@ function HotelList() {
 
   const isRowSelected = (rowId) => selectedRows.has(rowId);
 
-  // --- Funciones para el borrado ---
+  // --- Functions for deletion ---
   const openDeleteModal = () => {
     if (selectedRows.size === 1) {
       const selectedId = Array.from(selectedRows)[0];
       setHotelToDeleteId(selectedId);
       setShowDeleteModal(true);
-      setDeleteError(null); // Limpiar error previo
-      setDeleteSuccess(null); // Limpiar éxito previo
+      setDeleteError(null); // Clear previous error
+      setDeleteSuccess(null); // Clear previous success
     }
   };
 
@@ -161,8 +168,7 @@ function HotelList() {
     setDeleteSuccess(null);
 
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/hotels/${hotelToDeleteId}`, {
+      const response = await authenticatedFetch(`/hotels/${hotelToDeleteId}`, {
         method: 'DELETE',
       });
 
@@ -185,7 +191,7 @@ function HotelList() {
       setDeleteError(err.message || 'Could not delete property. Please try again.');
     }
   };
-  // --- Fin de funciones para el borrado ---
+  // --- End of deletion functions ---
 
   return (
     <div style={containerStyle}>
@@ -208,7 +214,7 @@ function HotelList() {
           <Button
             kind="secondary"
             style={actionButtonStyle}
-            disabled={selectedRows.size === 0} // Habilitado si al menos una fila está seleccionada
+            disabled={selectedRows.size === 0} // Enabled if at least one row is selected
           >
             View Property Amenities
           </Button>
@@ -228,7 +234,7 @@ function HotelList() {
           <Button
             kind="secondary"
             style={actionButtonStyle}
-            disabled={selectedRows.size !== 1} // Habilitado solo si una fila está seleccionada
+            disabled={selectedRows.size !== 1} // Enabled only if one row is selected
             onClick={() => {
               if (selectedRows.size === 1) {
                 const selectedHotelId = Array.from(selectedRows)[0];
@@ -238,12 +244,12 @@ function HotelList() {
           >
             View Property Details
           </Button>
-          {/* Botón de Eliminar */}
+          {/* Delete Button */}
           <Button
-            kind="danger" // 'danger' para acciones destructivas
+            kind="danger" // 'danger' for destructive actions
             renderIcon={TrashCan}
             style={actionButtonStyle}
-            disabled={selectedRows.size !== 1} // Habilitado solo si UNA fila está seleccionada
+            disabled={selectedRows.size !== 1} // Enabled only if ONE row is selected
             onClick={openDeleteModal}
           >
             Delete Property
@@ -262,7 +268,7 @@ function HotelList() {
           style={{ marginBottom: '1rem' }}
         />
       )}
-      {/* Notificación de error en eliminación */}
+      {/* Deletion error notification */}
       {deleteError && (
         <InlineNotification
           kind="error"
@@ -273,7 +279,7 @@ function HotelList() {
           style={{ marginBottom: '1rem' }}
         />
       )}
-      {/* Notificación de éxito en eliminación */}
+      {/* Deletion success notification */}
       {deleteSuccess && (
         <InlineNotification
           kind="success"
@@ -355,7 +361,7 @@ function HotelList() {
         </>
       )}
 
-      {/* Modal de Confirmación de Eliminación */}
+      {/* Deletion Confirmation Modal */}
       <Modal
         open={showDeleteModal}
         onRequestClose={closeDeleteModal}
@@ -363,16 +369,16 @@ function HotelList() {
         modalHeading="Confirm Deletion"
         primaryButtonText="YES"
         secondaryButtonText="NO"
-        danger // Indica que la acción primaria es destructiva
+        danger // Indicates that the primary action is destructive
       >
         <p>You are about to delete this property. This action is irreversible. Are you sure?</p>
-         {/* Mostrar error específico de la eliminación dentro del modal si es necesario */}
+         {/* Show specific deletion error within the modal if necessary */}
         {deleteError && (
             <InlineNotification
             kind="error"
             title="Deletion Failed"
             subtitle={deleteError}
-            hideCloseButton // Opcional: no permitir cerrar esta notificación específica
+            hideCloseButton // Optional: don't allow closing this specific notification
             lowContrast
             style={{ marginTop: '1rem', marginBottom: '0' }}
             />
