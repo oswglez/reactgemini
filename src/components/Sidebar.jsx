@@ -200,6 +200,20 @@ function Sidebar() {
               </NavLink>
             </div>
           </li>
+
+          {/* Users Section */}
+          <li style={sectionTitleStyle}>Users</li>
+          <li>
+            <NavLink
+              to="/users"
+              style={({ isActive }) => ({
+                ...linkStyle,
+                ...(isActive ? activeStyle : {}),
+              })}
+            >
+              Manage Users
+            </NavLink>
+          </li>
         </ul>
       </nav>
     </div> // <-- Cierre del DIV exterior

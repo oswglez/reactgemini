@@ -35,6 +35,8 @@ import RoomTypeForm from './components/types/RoomTypeForm';
 import RoomEditForm from './components/RoomEditForm';
 import RoomList from './components/RoomList';
 import RoomNewForm from './components/RoomNewForm';
+import UserList from './components/UserList';
+import UserEditForm from './components/UserEditForm';
 
 // Componentes 404
 const NotFound = () => (
@@ -124,6 +126,10 @@ function App() {
           <Route path="/rooms/edit/:roomId" element={<RoomEditForm />} />
           <Route path="/hotels/:hotelId/rooms/new" element={<RoomNewForm />} />
 
+          {/* Listado de Usuarios */}
+          <Route path="users" element={<UserList />} />
+          <Route path="/users/new" element={<UserEditForm />} />
+          <Route path="/users/edit/:id" element={<UserEditForm />} />
 
           {/* Ruta 404 para cualquier otra URL no capturada */}
           <Route path="*" element={<NotFound />} />
