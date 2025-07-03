@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   Loading, InlineNotification, Button, Pagination, DataTable,
   TableContainer, Table, TableHead, TableRow, TableHeader, TableBody, TableCell,
-  Modal, Checkbox
+  Modal, Checkbox, Dropdown
 } from '@carbon/react';
 import { AddFilled, TrashCan, Edit, View } from '@carbon/icons-react';
 import { useAuthenticatedFetch } from '../services/apiService';
+import UserRoleList from "./UserRoleList";
 
 const containerStyle = {
   marginTop: '1rem',
@@ -48,6 +49,8 @@ function UserList() {
   const [userToDeleteId, setUserToDeleteId] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(null);
+  const [showRolesScreen, setShowRolesScreen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
   const authenticatedFetch = useAuthenticatedFetch();
 
@@ -154,6 +157,20 @@ function UserList() {
     isActive: user.isActive ? 'Yes' : 'No',
   }));
 
+  // Si está activa la pantalla de roles, solo muestra UserRoleList
+  if (showRolesScreen && selectedUserId) {
+    return (
+      <UserRoleList
+        userId={selectedUserId}
+        onClose={() => {
+          setShowRolesScreen(false);
+          setSelectedUserId(null);
+        }}
+      />
+    );
+  }
+
+  // Si no, muestra la tabla de usuarios
   return (
     <div style={containerStyle}>
       <div style={tableTitleContainerStyle}>
@@ -169,20 +186,25 @@ function UserList() {
       </p>
       <div style={actionBarStyle}>
         <Button
-          kind="secondary"
-          renderIcon={View}
-          disabled={selectedRows.size !== 1}
-          onClick={() => selectedRows.size === 1 && navigate(`/users/view/${Array.from(selectedRows)[0]}`)}
-        >
-          View User
-        </Button>
-        <Button
           kind="tertiary"
           renderIcon={Edit}
           disabled={selectedRows.size !== 1}
           onClick={() => selectedRows.size === 1 && navigate(`/users/edit/${Array.from(selectedRows)[0]}`)}
         >
-          Edit User
+          View User Details
+        </Button>
+        <Button
+          kind="secondary"
+          renderIcon={View}
+          disabled={selectedRows.size !== 1}
+          onClick={() => {
+            if (selectedRows.size === 1) {
+              setSelectedUserId(Array.from(selectedRows)[0]);
+              setShowRolesScreen(true);
+            }
+          }}
+        >
+          View User Roles
         </Button>
         <Button
           kind="danger"
@@ -212,11 +234,16 @@ function UserList() {
               <Table>
                 <TableHead>
                   <TableRow>
-                    {headers.map(header => (
-                      <TableHeader key={header.key} {...getHeaderProps({ header })}>
-                        {header.header}
-                      </TableHeader>
-                    ))}
+                    {headers.map(header => {
+                      const headerProps = getHeaderProps({ header });
+                      // eslint-disable-next-line no-unused-vars
+                      const { key, ...rest } = headerProps;
+                      return (
+                        <TableHeader key={header.key} {...rest}>
+                          {header.header}
+                        </TableHeader>
+                      );
+                    })}
                   </TableRow>
                 </TableHead>
                 <TableBody>

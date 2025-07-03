@@ -13,6 +13,7 @@ import {
   ModalFooter,
 } from '@carbon/react';
 import { useAuthenticatedFetch } from '../services/apiService';
+import UserHotelRolesManager from './UserHotelRolesManager';
 
 const formContainerStyle = {
   padding: '2rem',
@@ -173,64 +174,71 @@ function UserEditForm() {
       {loading ? (
         <Loading active description="Loading user..." />
       ) : (
-        <Form onSubmit={handleSubmit}>
-          <TextInput
-            id="username"
-            name="username"
-            labelText="Username"
-            value={form.username}
-            onChange={handleChange}
-            required
-            style={{ marginBottom: '1rem' }}
-          />
-          <TextInput
-            id="email"
-            name="email"
-            labelText="Email"
-            value={form.email}
-            onChange={handleChange}
-            required
-            style={{ marginBottom: '1rem' }}
-          />
-          <TextInput
-            id="firstName"
-            name="firstName"
-            labelText="First Name"
-            value={form.firstName}
-            onChange={handleChange}
-            style={{ marginBottom: '1rem' }}
-          />
-          <TextInput
-            id="lastName"
-            name="lastName"
-            labelText="Last Name"
-            value={form.lastName}
-            onChange={handleChange}
-            style={{ marginBottom: '1rem' }}
-          />
-          <TextInput
-            id="auth0Id"
-            name="auth0Id"
-            labelText="Auth0 ID"
-            value={form.auth0Id}
-            onChange={handleChange}
-            style={{ marginBottom: '1rem' }}
-          />
-          <Checkbox
-            id="isActive"
-            name="isActive"
-            labelText="Active"
-            checked={form.isActive}
-            onChange={handleChange}
-            style={{ marginBottom: '1rem' }}
-          />
-          {error && <InlineNotification kind="error" title="Error" subtitle={error} style={{ marginBottom: '1rem' }} />}
-          {success && <InlineNotification kind="success" title="Success" subtitle={success} style={{ marginBottom: '1rem' }} />}
-          <div style={buttonContainerStyle}>
-            <Button kind="secondary" onClick={handleCancel} type="button">Cancel</Button>
-            <Button kind="primary" type="submit" disabled={saving}>Save</Button>
-          </div>
-        </Form>
+        <>
+          <Form onSubmit={handleSubmit}>
+            <TextInput
+              id="username"
+              name="username"
+              labelText="Username"
+              value={form.username}
+              onChange={handleChange}
+              required
+              style={{ marginBottom: '1rem' }}
+            />
+            <TextInput
+              id="email"
+              name="email"
+              labelText="Email"
+              value={form.email}
+              onChange={handleChange}
+              required
+              style={{ marginBottom: '1rem' }}
+            />
+            <TextInput
+              id="firstName"
+              name="firstName"
+              labelText="First Name"
+              value={form.firstName}
+              onChange={handleChange}
+              style={{ marginBottom: '1rem' }}
+            />
+            <TextInput
+              id="lastName"
+              name="lastName"
+              labelText="Last Name"
+              value={form.lastName}
+              onChange={handleChange}
+              style={{ marginBottom: '1rem' }}
+            />
+            <TextInput
+              id="auth0Id"
+              name="auth0Id"
+              labelText="Auth0 ID"
+              value={form.auth0Id}
+              onChange={handleChange}
+              style={{ marginBottom: '1rem' }}
+            />
+            <Checkbox
+              id="isActive"
+              name="isActive"
+              labelText="Active"
+              checked={form.isActive}
+              onChange={handleChange}
+              style={{ marginBottom: '1rem' }}
+            />
+            {error && <InlineNotification kind="error" title="Error" subtitle={error} style={{ marginBottom: '1rem' }} />}
+            {success && <InlineNotification kind="success" title="Success" subtitle={success} style={{ marginBottom: '1rem' }} />}
+            <div style={buttonContainerStyle}>
+              <Button kind="secondary" onClick={handleCancel} type="button">Cancel</Button>
+              <Button kind="primary" type="submit" disabled={saving}>Save</Button>
+            </div>
+          </Form>
+          {id && (
+            <div style={{ marginTop: '2.5rem' }}>
+              <UserHotelRolesManager userId={id} />
+            </div>
+          )}
+        </>
       )}
       {openCancelModal && (
         <ComposedModal open={openCancelModal} onClose={closeModal} preventCloseOnClickOutside={false} size="sm">
