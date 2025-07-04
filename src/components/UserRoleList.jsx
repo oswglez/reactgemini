@@ -11,20 +11,44 @@ import {
   Button,
   Dropdown,
   InlineNotification,
-  Loading
+  Loading,
+  RadioButtonGroup,
+  RadioButton,
+  Tag,
+  SkeletonText,
+  Tile
 } from '@carbon/react';
-import { useAuthenticatedFetch } from '../services/apiService';
+import { useAuthenticatedFetch, apiService } from '../services/apiService';
+import { useAuth0 } from "@auth0/auth0-react";
 
 const UserRoleList = ({ userId, onClose }) => {
   const authenticatedFetch = useAuthenticatedFetch();
+  const { getAccessTokenSilently } = useAuth0();
+  
+  // User and roles data
   const [user, setUser] = useState(null);
   const [userHotelRoles, setUserHotelRoles] = useState([]);
-  const [hotels, setHotels] = useState([]);
   const [roles, setRoles] = useState([]);
+  
+  // Available options for assignment
+  const [chains, setChains] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [hotels, setHotels] = useState([]);
+  
+  // New assignment state
+  const [assignmentType, setAssignmentType] = useState('hotel'); // 'chain', 'brand', 'hotel'
+  const [newChain, setNewChain] = useState(null);
+  const [newBrand, setNewBrand] = useState(null);
   const [newHotel, setNewHotel] = useState(null);
   const [newRole, setNewRole] = useState(null);
+  
+  // UI state
   const [loading, setLoading] = useState(true);
+  const [loadingOptions, setLoadingOptions] = useState(true);
   const [addError, setAddError] = useState(null);
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [validationErrors, setValidationErrors] = useState({});
 
   // Cargar datos del usuario (igual que UserEditForm)
   useEffect(() => {
@@ -38,15 +62,13 @@ const UserRoleList = ({ userId, onClose }) => {
       .catch(() => setUser(null));
   }, [userId, authenticatedFetch]);
 
-  // Cargar roles actuales del usuario y extraer roles únicos
+  // Load user's current roles and extract unique roles
   useEffect(() => {
     setLoading(true);
-    authenticatedFetch(`/user-hotel-roles/user/${userId}`)
-      .then(async res => {
-        if (!res.ok) throw new Error('Could not fetch user hotel roles');
-        const data = await res.json();
+    apiService.userHotelRoles.getUserRoles(userId, getAccessTokenSilently)
+      .then(data => {
         setUserHotelRoles(Array.isArray(data) ? data : []);
-        // Extraer roles únicos para el dropdown
+        // Extract unique roles for dropdown
         const uniqueRoles = [];
         const seen = new Set();
         (Array.isArray(data) ? data : []).forEach(rel => {
@@ -62,67 +84,193 @@ const UserRoleList = ({ userId, onClose }) => {
         setRoles([]);
       })
       .finally(() => setLoading(false));
-  }, [userId, authenticatedFetch]);
+  }, [userId, getAccessTokenSilently]);
 
-  // Cargar hoteles (igual que HotelList)
+  // Load all options (chains, brands, hotels) with loading state
   useEffect(() => {
-    authenticatedFetch(`/hotels/hotelList?page=0&size=1000`)
-      .then(async res => {
-        if (!res.ok) throw new Error('Could not fetch hotels');
-        const data = await res.json();
-        setHotels(Array.isArray(data.content) ? data.content : []);
+    setLoadingOptions(true);
+    Promise.all([
+      apiService.chains.getAll(getAccessTokenSilently),
+      apiService.brands.getAll(getAccessTokenSilently),
+      apiService.hotels.getAll(getAccessTokenSilently)
+    ])
+      .then(([chainsData, brandsData, hotelsData]) => {
+        setChains(Array.isArray(chainsData) ? chainsData : []);
+        setBrands(Array.isArray(brandsData) ? brandsData : []);
+        setHotels(Array.isArray(hotelsData.content) ? hotelsData.content : []);
       })
-      .catch(() => setHotels([]));
-  }, [authenticatedFetch]);
+      .catch((error) => {
+        console.error('Error loading options:', error);
+        setChains([]);
+        setBrands([]);
+        setHotels([]);
+      })
+      .finally(() => {
+        setLoadingOptions(false);
+      });
+  }, [getAccessTokenSilently]);
 
-  // Agregar nueva relación
+  // Add new role assignment
   const handleAddRole = () => {
-    setAddError(null);
-    if (!newHotel || !newRole) return;
-    authenticatedFetch(`/user-hotel-roles`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId,
-        hotelId: newHotel.hotelId,
-        roleId: newRole.roleId,
-        isActive: true
+    clearValidationErrors();
+    setSuccessMessage(null);
+    
+    // Run validation
+    const errors = validateAssignment();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setIsAssigning(true);
+    
+    let assignData = {
+      userId: userId,
+      roleId: newRole.roleId,
+      isActive: true
+    };
+    
+    // Add the appropriate ID based on assignment type
+    if (assignmentType === 'chain' && newChain) {
+      assignData.chainId = newChain.chainId;
+    } else if (assignmentType === 'brand' && newBrand) {
+      assignData.brandId = newBrand.brandId;
+    } else if (assignmentType === 'hotel' && newHotel) {
+      assignData.hotelId = newHotel.hotelId;
+    }
+    
+    apiService.userHotelRoles.assignRole(assignData, getAccessTokenSilently)
+      .then(() => {
+        // Refresh the roles list
+        return apiService.userHotelRoles.getUserRoles(userId, getAccessTokenSilently);
       })
-    })
-      .then(async res => {
-        if (!res.ok) throw new Error('Could not add role');
-        // Refresca la lista de roles
-        const refreshed = await authenticatedFetch(`/user-hotel-roles/user/${userId}`);
-        const refreshedData = await refreshed.json();
-        setUserHotelRoles(Array.isArray(refreshedData) ? refreshedData : []);
-        // Refresca roles únicos
+      .then(data => {
+        setUserHotelRoles(Array.isArray(data) ? data : []);
+        // Refresh unique roles
         const uniqueRoles = [];
         const seen = new Set();
-        (Array.isArray(refreshedData) ? refreshedData : []).forEach(rel => {
+        (Array.isArray(data) ? data : []).forEach(rel => {
           if (rel.roleId && rel.roleName && !seen.has(rel.roleId)) {
             uniqueRoles.push({ roleId: rel.roleId, roleName: rel.roleName });
             seen.add(rel.roleId);
           }
         });
         setRoles(uniqueRoles);
+        
+        // Reset form
+        setNewChain(null);
+        setNewBrand(null);
         setNewHotel(null);
         setNewRole(null);
+        
+        // Show success message
+        const scopeName = assignmentType === 'chain' ? newChain?.chainName : 
+                         assignmentType === 'brand' ? newBrand?.brandName : 
+                         newHotel?.hotelName;
+        setSuccessMessage(`Role "${newRole.roleName}" successfully assigned to ${assignmentType} "${scopeName}"`);
       })
-      .catch(() => setAddError("Could not add role. Please try again."));
+      .catch((error) => {
+        console.error('Assignment error:', error);
+        setAddError(error.message || "Could not assign role. Please try again.");
+      })
+      .finally(() => {
+        setIsAssigning(false);
+      });
   };
 
   const dataTableHeaders = [
-    { key: 'hotel', header: 'Hotel', style: { width: '40%' } },
-    { key: 'role', header: 'Role', style: { width: '40%' } },
-    { key: 'active', header: 'Active', style: { width: '20%' } }
+    { key: 'scope', header: 'Scope', style: { width: '30%' } },
+    { key: 'name', header: 'Name', style: { width: '30%' } },
+    { key: 'role', header: 'Role', style: { width: '30%' } },
+    { key: 'active', header: 'Active', style: { width: '10%' } }
   ];
 
-  const tableRows = userHotelRoles.map((rel, idx) => ({
-    id: idx.toString(),
-    hotel: rel.hotelName,
-    role: rel.roleName,
-    active: rel.isActive ? 'Yes' : 'No',
-  }));
+  const tableRows = userHotelRoles.map((rel, idx) => {
+    let scope = 'Hotel';
+    let name = rel.hotelName || 'N/A';
+    let scopeType = 'hotel';
+    
+    if (rel.chainId && rel.chainName) {
+      scope = 'Chain';
+      name = rel.chainName;
+      scopeType = 'chain';
+    } else if (rel.brandId && rel.brandName) {
+      scope = 'Brand';
+      name = rel.brandName;
+      scopeType = 'brand';
+    }
+    
+    return {
+      id: idx.toString(),
+      scope: scope,
+      scopeType: scopeType,
+      name: name,
+      role: rel.roleName,
+      active: rel.isActive ? 'Yes' : 'No',
+    };
+  });
+
+  // Validation functions
+  const validateAssignment = () => {
+    const errors = {};
+    
+    // Validate role selection
+    if (!newRole) {
+      errors.role = 'Please select a role';
+    }
+    
+    // Validate scope selection based on assignment type
+    if (assignmentType === 'chain' && !newChain) {
+      errors.scope = 'Please select a chain';
+    } else if (assignmentType === 'brand' && !newBrand) {
+      errors.scope = 'Please select a brand';
+    } else if (assignmentType === 'hotel' && !newHotel) {
+      errors.scope = 'Please select a hotel';
+    }
+    
+    // Check for duplicate assignments
+    const existingAssignment = userHotelRoles.find(rel => {
+      if (assignmentType === 'chain' && newChain) {
+        return rel.chainId === newChain.chainId && rel.roleId === newRole?.roleId;
+      } else if (assignmentType === 'brand' && newBrand) {
+        return rel.brandId === newBrand.brandId && rel.roleId === newRole?.roleId;
+      } else if (assignmentType === 'hotel' && newHotel) {
+        return rel.hotelId === newHotel.hotelId && rel.roleId === newRole?.roleId;
+      }
+      return false;
+    });
+    
+    if (existingAssignment) {
+      errors.duplicate = `This user already has the role "${newRole?.roleName}" assigned to this ${assignmentType}`;
+    }
+    
+    return errors;
+  };
+
+  const clearValidationErrors = () => {
+    setValidationErrors({});
+    setAddError(null);
+  };
+
+  // Real-time validation for duplicate detection
+  const getDuplicateWarning = () => {
+    if (!newRole) return null;
+    
+    const existingAssignment = userHotelRoles.find(rel => {
+      if (assignmentType === 'chain' && newChain) {
+        return rel.chainId === newChain.chainId && rel.roleId === newRole.roleId;
+      } else if (assignmentType === 'brand' && newBrand) {
+        return rel.brandId === newBrand.brandId && rel.roleId === newRole.roleId;
+      } else if (assignmentType === 'hotel' && newHotel) {
+        return rel.hotelId === newHotel.hotelId && rel.roleId === newRole.roleId;
+      }
+      return false;
+    });
+    
+    return existingAssignment ? `Warning: This user already has the role "${newRole.roleName}" assigned to this ${assignmentType}` : null;
+  };
+
+  const duplicateWarning = getDuplicateWarning();
 
   console.log("userHotelRoles:", userHotelRoles);
 
@@ -147,12 +295,29 @@ const UserRoleList = ({ userId, onClose }) => {
       )}
 
       <h2 style={{ textAlign: "center", marginBottom: 32, fontSize: 28 }}>User Hotel Roles</h2>
+      
+      {/* Success Message */}
+      {successMessage && (
+        <InlineNotification 
+          kind="success" 
+          title="Success" 
+          subtitle={successMessage} 
+          style={{ marginBottom: 16 }}
+          onClose={() => setSuccessMessage(null)}
+        />
+      )}
+      
       {loading ? (
         <Loading active description="Loading roles..." />
       ) : userHotelRoles.length === 0 ? (
-        <div style={{ textAlign: "center", fontSize: 18, margin: "2rem 0" }}>
-          No roles assigned yet.
-        </div>
+        <Tile style={{ textAlign: "center", padding: "2rem" }}>
+          <div style={{ fontSize: 18, color: "#666" }}>
+            No roles assigned yet.
+          </div>
+          <div style={{ fontSize: 14, color: "#999", marginTop: 8 }}>
+            Use the form below to assign roles to this user.
+          </div>
+        </Tile>
       ) : (
         <DataTable
           rows={tableRows}
@@ -181,7 +346,24 @@ const UserRoleList = ({ userId, onClose }) => {
                     <TableRow key={row.id}>
                       {row.cells.map(cell => (
                         <TableCell key={cell.id} style={{ fontSize: 18 }}>
-                          {cell.value}
+                          {cell.id.includes('scope') ? (
+                            <Tag 
+                              type={row.scopeType === 'chain' ? 'blue' : 
+                                    row.scopeType === 'brand' ? 'purple' : 'green'}
+                              size="sm"
+                            >
+                              {cell.value}
+                            </Tag>
+                          ) : cell.id.includes('active') ? (
+                            <Tag 
+                              type={cell.value === 'Yes' ? 'green' : 'red'}
+                              size="sm"
+                            >
+                              {cell.value}
+                            </Tag>
+                          ) : (
+                            cell.value
+                          )}
                         </TableCell>
                       ))}
                     </TableRow>
@@ -193,36 +375,170 @@ const UserRoleList = ({ userId, onClose }) => {
         />
       )}
 
-      <div style={{
-        display: "flex",
-        gap: 24,
-        alignItems: "center",
-        marginBottom: 24,
-        marginTop: 32
-      }}>
-        <Dropdown
-          id="hotel-dropdown"
-          titleText="Hotel"
-          label="Select hotel..."
-          items={hotels}
-          itemToString={item => item ? item.hotelName || item.name : ''}
-          selectedItem={newHotel}
-          onChange={({ selectedItem }) => setNewHotel(selectedItem)}
-          style={{ minWidth: 220, fontSize: 18 }}
-        />
-        <Dropdown
-          id="role-dropdown"
-          titleText="Role"
-          label="Select role..."
-          items={roles}
-          itemToString={item => item ? item.roleName : ''}
-          selectedItem={newRole}
-          onChange={({ selectedItem }) => setNewRole(selectedItem)}
-          style={{ minWidth: 180, fontSize: 18 }}
-        />
-        <Button kind="primary" onClick={handleAddRole} disabled={!newHotel || !newRole} style={{ height: 48, fontSize: 18 }}>
-          Add
-        </Button>
+      <div style={{ marginTop: 32, marginBottom: 24 }}>
+        <h3 style={{ marginBottom: 16 }}>Assign New Role</h3>
+        
+        {loadingOptions ? (
+          <div style={{ marginBottom: 24 }}>
+            <SkeletonText paragraph width="100%" lineCount={3} />
+          </div>
+        ) : (
+          <>
+            {/* Assignment Type Selection */}
+            <div style={{ marginBottom: 24 }}>
+                          <RadioButtonGroup
+              name="assignment-type"
+              legendText="Assignment Scope"
+              valueSelected={assignmentType}
+              onChange={(value) => {
+                setAssignmentType(value);
+                clearValidationErrors();
+                // Reset selections when changing assignment type
+                setNewChain(null);
+                setNewBrand(null);
+                setNewHotel(null);
+                setNewRole(null);
+              }}
+            >
+                <RadioButton
+                  id="chain-radio"
+                  labelText={`Chain (${chains.length} available)`}
+                  value="chain"
+                  disabled={chains.length === 0}
+                />
+                <RadioButton
+                  id="brand-radio"
+                  labelText={`Brand (${brands.length} available)`}
+                  value="brand"
+                  disabled={brands.length === 0}
+                />
+                <RadioButton
+                  id="hotel-radio"
+                  labelText={`Hotel (${hotels.length} available)`}
+                  value="hotel"
+                  disabled={hotels.length === 0}
+                />
+              </RadioButtonGroup>
+            </div>
+
+                  {/* Assignment Form */}
+          <div style={{
+            display: "flex",
+            gap: 24,
+            alignItems: "center",
+            marginBottom: 24
+          }}>
+            {/* Dynamic dropdown based on assignment type */}
+            {assignmentType === 'chain' && (
+              <div>
+                <Dropdown
+                  id="chain-dropdown"
+                  titleText="Chain"
+                  label="Select chain..."
+                  items={chains}
+                  itemToString={item => item ? item.chainName : ''}
+                  selectedItem={newChain}
+                  onChange={({ selectedItem }) => {
+                    setNewChain(selectedItem);
+                    clearValidationErrors();
+                  }}
+                  style={{ minWidth: 220, fontSize: 18 }}
+                  invalid={!!validationErrors.scope}
+                  invalidText={validationErrors.scope}
+                />
+              </div>
+            )}
+            
+            {assignmentType === 'brand' && (
+              <div>
+                <Dropdown
+                  id="brand-dropdown"
+                  titleText="Brand"
+                  label="Select brand..."
+                  items={brands}
+                  itemToString={item => item ? item.brandName : ''}
+                  selectedItem={newBrand}
+                  onChange={({ selectedItem }) => {
+                    setNewBrand(selectedItem);
+                    clearValidationErrors();
+                  }}
+                  style={{ minWidth: 220, fontSize: 18 }}
+                  invalid={!!validationErrors.scope}
+                  invalidText={validationErrors.scope}
+                />
+              </div>
+            )}
+            
+            {assignmentType === 'hotel' && (
+              <div>
+                <Dropdown
+                  id="hotel-dropdown"
+                  titleText="Hotel"
+                  label="Select hotel..."
+                  items={hotels}
+                  itemToString={item => item ? item.hotelName || item.name : ''}
+                  selectedItem={newHotel}
+                  onChange={({ selectedItem }) => {
+                    setNewHotel(selectedItem);
+                    clearValidationErrors();
+                  }}
+                  style={{ minWidth: 220, fontSize: 18 }}
+                  invalid={!!validationErrors.scope}
+                  invalidText={validationErrors.scope}
+                />
+              </div>
+            )}
+            
+            <div>
+              <Dropdown
+                id="role-dropdown"
+                titleText="Role"
+                label="Select role..."
+                items={roles}
+                itemToString={item => item ? item.roleName : ''}
+                selectedItem={newRole}
+                onChange={({ selectedItem }) => {
+                  setNewRole(selectedItem);
+                  clearValidationErrors();
+                }}
+                style={{ minWidth: 180, fontSize: 18 }}
+                invalid={!!validationErrors.role}
+                invalidText={validationErrors.role}
+              />
+            </div>
+            
+            <Button 
+              kind="primary" 
+              onClick={handleAddRole} 
+              disabled={isAssigning} 
+              style={{ height: 48, fontSize: 18 }}
+            >
+              {isAssigning ? 'Assigning...' : 'Assign Role'}
+            </Button>
+          </div>
+          
+          {/* Validation Error Messages */}
+          {validationErrors.duplicate && (
+            <InlineNotification 
+              kind="error" 
+              title="Duplicate Assignment" 
+              subtitle={validationErrors.duplicate} 
+              style={{ marginBottom: 16 }}
+              onClose={() => setValidationErrors(prev => ({ ...prev, duplicate: null }))}
+            />
+          )}
+          
+          {/* Real-time Duplicate Warning */}
+          {duplicateWarning && (
+            <InlineNotification 
+              kind="warning" 
+              title="Potential Duplicate" 
+              subtitle={duplicateWarning} 
+              style={{ marginBottom: 16 }}
+            />
+          )}
+          </>
+        )}
       </div>
       {addError && <InlineNotification kind="error" title="Error" subtitle={addError} style={{ marginBottom: 16 }} />}
       <div style={{ textAlign: "right" }}>

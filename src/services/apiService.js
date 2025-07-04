@@ -112,4 +112,76 @@ export const apiService = {
     
     return response.json();
   },
+
+  // User Hotel Role specific methods
+  userHotelRoles: {
+    // Get all user hotel roles for a specific user
+    getUserRoles: async (userId, getAccessTokenSilently) => {
+      return apiService.get(`/user-hotel-roles/user/${userId}`, getAccessTokenSilently);
+    },
+
+    // Assign a role using the new hierarchical endpoint
+    assignRole: async (assignRoleData, getAccessTokenSilently) => {
+      return apiService.post('/user-hotel-roles/assign', assignRoleData, getAccessTokenSilently);
+    },
+
+    // Create a user hotel role (legacy method)
+    create: async (userHotelRoleData, getAccessTokenSilently) => {
+      return apiService.post('/user-hotel-roles', userHotelRoleData, getAccessTokenSilently);
+    },
+
+    // Get all user hotel roles
+    getAll: async (getAccessTokenSilently) => {
+      return apiService.get('/user-hotel-roles', getAccessTokenSilently);
+    },
+
+    // Delete a user hotel role
+    delete: async (id, getAccessTokenSilently) => {
+      return apiService.delete(`/user-hotel-roles/${id}`, getAccessTokenSilently);
+    }
+  },
+
+  // Chain management methods
+  chains: {
+    getAll: async (getAccessTokenSilently) => {
+      return apiService.get('/chain', getAccessTokenSilently);
+    },
+
+    getById: async (id, getAccessTokenSilently) => {
+      return apiService.get(`/chain/${id}`, getAccessTokenSilently);
+    }
+  },
+
+  // Brand management methods
+  brands: {
+    getAll: async (getAccessTokenSilently) => {
+      return apiService.get('/brand', getAccessTokenSilently);
+    },
+
+    getById: async (id, getAccessTokenSilently) => {
+      return apiService.get(`/brand/${id}`, getAccessTokenSilently);
+    }
+  },
+
+  // Hotel management methods (enhanced)
+  hotels: {
+    getAll: async (getAccessTokenSilently) => {
+      return apiService.get('/hotels/hotelList?page=0&size=1000', getAccessTokenSilently);
+    },
+
+    getById: async (id, getAccessTokenSilently) => {
+      return apiService.get(`/hotels/${id}`, getAccessTokenSilently);
+    }
+  },
+
+  // Role management methods
+  roles: {
+    getAll: async (getAccessTokenSilently) => {
+      return apiService.get('/roles', getAccessTokenSilently);
+    },
+
+    getById: async (id, getAccessTokenSilently) => {
+      return apiService.get(`/roles/${id}`, getAccessTokenSilently);
+    }
+  }
 }; 
