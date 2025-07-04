@@ -16,6 +16,11 @@ import {
   RadioButton,
   Tag,
   SkeletonText,
+  Tile,
+  RadioButtonGroup,
+  RadioButton,
+  Tag,
+  SkeletonText,
   Tile
 } from '@carbon/react';
 import { useAuthenticatedFetch, apiService } from '../services/apiService';
@@ -23,6 +28,9 @@ import { useAuth0 } from "@auth0/auth0-react";
 
 const UserRoleList = ({ userId, onClose }) => {
   const authenticatedFetch = useAuthenticatedFetch();
+  const { getAccessTokenSilently } = useAuth0();
+  
+  // User and roles data
   const { getAccessTokenSilently } = useAuth0();
   
   // User and roles data
@@ -44,6 +52,7 @@ const UserRoleList = ({ userId, onClose }) => {
   
   // UI state
   const [loading, setLoading] = useState(true);
+  const [loadingOptions, setLoadingOptions] = useState(true);
   const [addError, setAddError] = useState(null);
   const [isAssigning, setIsAssigning] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
