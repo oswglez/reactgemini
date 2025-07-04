@@ -16,11 +16,6 @@ import {
   RadioButton,
   Tag,
   SkeletonText,
-  Tile,
-  RadioButtonGroup,
-  RadioButton,
-  Tag,
-  SkeletonText,
   Tile
 } from '@carbon/react';
 import { useAuthenticatedFetch, apiService } from '../services/apiService';
@@ -31,17 +26,12 @@ const UserRoleList = ({ userId, onClose }) => {
   const { getAccessTokenSilently } = useAuth0();
   
   // User and roles data
-  const { getAccessTokenSilently } = useAuth0();
-  
-  // User and roles data
   const [user, setUser] = useState(null);
   const [userHotelRoles, setUserHotelRoles] = useState([]);
   const [roles, setRoles] = useState([]);
   
   // Available options for assignment
   const [chains, setChains] = useState([]);
-  const [brands, setBrands] = useState([]);
-  const [hotels, setHotels] = useState([]);
   
   // New assignment state
   const [assignmentType, setAssignmentType] = useState('hotel'); // 'chain', 'brand', 'hotel'
@@ -52,7 +42,6 @@ const UserRoleList = ({ userId, onClose }) => {
   
   // UI state
   const [loading, setLoading] = useState(true);
-  const [loadingOptions, setLoadingOptions] = useState(true);
   const [addError, setAddError] = useState(null);
   const [isAssigning, setIsAssigning] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -67,6 +56,9 @@ const UserRoleList = ({ userId, onClose }) => {
   // Add filtered brands and hotels state
   const [filteredBrands, setFilteredBrands] = useState([]);
   const [filteredHotels, setFilteredHotels] = useState([]);
+
+  // Add currentUserId state
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   // Load chains on mount
   useEffect(() => {
@@ -123,8 +115,6 @@ const UserRoleList = ({ userId, onClose }) => {
         .then(chainData => {
           if (chainData && Array.isArray(chainData.brands)) {
             setFilteredBrands(chainData.brands);
-          } else if (brands.length > 0) {
-            setFilteredBrands(brands.filter(b => b.chainId === newChain.chainId));
           } else {
             setFilteredBrands([]);
           }
@@ -158,6 +148,7 @@ const UserRoleList = ({ userId, onClose }) => {
 
   // Add new role assignment
   const handleAddRole = () => {
+    console.log("handleAddRole called");
     clearValidationErrors();
     setSuccessMessage(null);
     
@@ -168,12 +159,19 @@ const UserRoleList = ({ userId, onClose }) => {
       return;
     }
     
+    // Verifica que currentUserId exista
+    if (!currentUserId) {
+      setAddError("Could not identify the user assigning the role. Please reload the page or contact support.");
+      return;
+    }
+    
     setIsAssigning(true);
     
     let assignData = {
       userId: userId,
       roleId: newRole.roleId,
-      isActive: true
+      isActive: true,
+      assignedBy: currentUserId
     };
     
     // Add the appropriate ID based on assignment type
@@ -185,6 +183,7 @@ const UserRoleList = ({ userId, onClose }) => {
       assignData.hotelId = newHotel.hotelId;
     }
     
+    console.log("Assigning role with payload:", assignData);
     apiService.userHotelRoles.assignRole(assignData, getAccessTokenSilently)
       .then(() => {
         // Refresh the roles list
@@ -320,6 +319,16 @@ const UserRoleList = ({ userId, onClose }) => {
 
   console.log("userHotelRoles:", userHotelRoles);
 
+  // Load currentUserId on mount
+  useEffect(() => {
+    apiService.get('/users/me', getAccessTokenSilently)
+      .then(data => {
+        console.log("Response from /users/me:", data);
+        setCurrentUserId(data.userId);
+      })
+      .catch(() => setCurrentUserId(null));
+  }, []);
+
   return (
     <div style={{
       maxWidth: 900,
@@ -452,7 +461,7 @@ const UserRoleList = ({ userId, onClose }) => {
             />
             <RadioButton
               id="hotel-radio"
-              labelText={`Hotel (${hotels.length} loaded)`}
+              labelText={`Hotel (${filteredHotels.length} loaded)`}
               value="hotel"
             />
           </RadioButtonGroup>
