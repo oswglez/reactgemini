@@ -8,6 +8,7 @@ import {
 import { AddFilled, TrashCan, Edit, View } from '@carbon/icons-react';
 import { useAuthenticatedFetch } from '../services/apiService';
 import UserRoleList from "./UserRoleList";
+import UserNewForm from "./UserNewForm";
 
 const containerStyle = {
   marginTop: '1rem',
@@ -51,6 +52,7 @@ function UserList() {
   const [deleteSuccess, setDeleteSuccess] = useState(null);
   const [showRolesScreen, setShowRolesScreen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const authenticatedFetch = useAuthenticatedFetch();
 
@@ -140,6 +142,11 @@ function UserList() {
   };
   // --- End of deletion functions ---
 
+  const handleUserCreated = () => {
+    setShowCreateForm(false);
+    fetchUsers(); // Refresh the list
+  };
+
   const dataTableHeaders = [
     { key: 'select', header: '', isSortable: false, style: { width: '60px' } },
     { key: 'userId', header: 'ID', isSortable: true },
@@ -170,6 +177,16 @@ function UserList() {
     );
   }
 
+  // Si está activo el formulario de creación, muestra UserNewForm
+  if (showCreateForm) {
+    return (
+      <UserNewForm
+        onUserCreated={handleUserCreated}
+        onCancel={() => setShowCreateForm(false)}
+      />
+    );
+  }
+
   // Si no, muestra la tabla de usuarios
   return (
     <div style={containerStyle}>
@@ -177,7 +194,7 @@ function UserList() {
         <h2 style={{ textAlign: 'left', color: '#3751ff', fontSize: '2rem', fontWeight: 700, margin: 0 }}>
           SelectVista AI Users
         </h2>
-        <Button kind="primary" renderIcon={AddFilled} onClick={() => navigate('/users/new')}>
+        <Button kind="primary" renderIcon={AddFilled} onClick={() => setShowCreateForm(true)}>
           New User
         </Button>
       </div>
