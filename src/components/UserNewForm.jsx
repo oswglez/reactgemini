@@ -34,6 +34,7 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
     lastName: '',
     auth0Id: '',
     isActive: true,
+    password: '', // <-- Agregado
     roleId: null,
     chainId: null,
     brandId: null,
@@ -390,6 +391,15 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
               type="email"
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
+              required
+            />
+            
+            <TextInput
+              id="password"
+              labelText="Password *"
+              type="password"
+              value={formData.password}
+              onChange={(e) => handleInputChange('password', e.target.value)}
               required
             />
             
