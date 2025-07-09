@@ -13,6 +13,8 @@ import {
   Stack,
 } from '@carbon/react';
 import { Save, Close } from '@carbon/icons-react';
+import { useAuth0 } from '@auth0/auth0-react';
+import { apiService } from '../services/apiService';
 
 // Estilos
 const containerStyle = {
@@ -38,9 +40,9 @@ const actionButtonStyle = {
 
 function AmenityEditForm() {
   const params = useParams();
-  // ---- CAMBIO AQUÍ ----
-  const { amenityId } = params; // Usamos amenityId (camelCase)
+  const { amenityId } = params;
   const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
 
   console.log("AmenityEditForm: useParams returned:", params);
 
@@ -73,14 +75,7 @@ function AmenityEditForm() {
     console.log(`fetchAmenityById: Attempting to fetch with ID: ${id}`);
 
     try {
-      const response = await fetch(`http://localhost:8090/api/amenities/${id}`);
-      if (!response.ok) {
-        const errorBody = await response.text();
-        console.error(`fetchAmenityById: API Error ${response.status} for ID ${id}:`, errorBody);
-        throw new Error(`HTTP Error ${response.status}: Could not fetch amenity details.`);
-      }
-      const data = await response.json();
-      console.log("fetchAmenityById: Data received:", data);
+      const data = await apiService.get(`/amenities/${id}`, getAccessTokenSilently);
       setAmenity(data);
       setInitialAmenity(data);
       setHasChanges(false);
@@ -93,17 +88,14 @@ function AmenityEditForm() {
   };
 
   useEffect(() => {
-    // ---- CAMBIO AQUÍ ----
     console.log("AmenityEditForm: useEffect running. amenityId is:", amenityId);
-    // ---- CAMBIO AQUÍ ----
     if (amenityId && amenityId !== 'undefined') {
         fetchAmenityById(amenityId);
     } else {
       setError('Amenity ID not found in URL. Please check the route and navigation link.');
       setLoading(false);
     }
-    // ---- CAMBIO AQUÍ ----
-  }, [amenityId]); // Dependemos de amenityId
+  }, [amenityId]);
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -122,7 +114,6 @@ function AmenityEditForm() {
     setSaveError(null);
     setSaveSuccess(null);
 
-    // ---- CAMBIO AQUÍ ----
     if (!amenityId || amenityId === 'undefined') {
         setSaveError("Cannot save: Amenity ID is missing.");
         setIsSaving(false);
@@ -130,25 +121,14 @@ function AmenityEditForm() {
     }
 
     try {
-      // ---- CAMBIO AQUÍ ----
-      const response = await fetch(`http://localhost:8090/api/amenities/${amenityId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(amenity),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP Error ${response.status}: ${errorBody || 'Could not save amenity.'}`);
-      }
-
-      const updatedAmenity = await response.json();
+      const updatedAmenity = await apiService.put(`/amenities/${amenityId}`, amenity, getAccessTokenSilently);
       setSaveSuccess('Amenity updated successfully!');
       setInitialAmenity(updatedAmenity);
       setAmenity(updatedAmenity);
       setHasChanges(false);
+      setTimeout(() => {
+        navigate('/amenities-list');
+      }, 1500);
     } catch (err) {
       console.error('Error saving amenity:', err);
       setSaveError(err.message || 'Could not save amenity. Please try again.');

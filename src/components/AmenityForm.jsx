@@ -15,6 +15,8 @@ import {
 } from '@carbon/react';
 import { Add, TrashCan } from '@carbon/icons-react';
 import { getApiBaseUrl } from '../services/config';
+import { useAuth0 } from '@auth0/auth0-react';
+import { apiService } from '../services/apiService';
 
 // Estado inicial usando nombres en inglés
 const initialAmenityState = {
@@ -32,6 +34,7 @@ const amenityTypeItems = [
 
 function AmenityForm() {
   const { hotelId } = useParams();
+  const { getAccessTokenSilently } = useAuth0();
   const [formData, setFormData] = useState(initialAmenityState);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -128,31 +131,9 @@ function AmenityForm() {
       amenityType: formData.type,
       amenityDescription: formData.description,
     };
-    const baseUrl = getApiBaseUrl();
-    const apiUrl = `${baseUrl}/api/amenities?hotelId=${hotelId}`;
-    console.log(`Sending Payload to ${apiUrl}:`, JSON.stringify(payload, null, 2));
-
+    const apiUrl = `/amenities?hotelId=${hotelId}`;
     try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        let errorMsg = `HTTP Error: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.message || JSON.stringify(errorData);
-        } catch (err) {
-          console.warn('Failed to parse error response as JSON:', err);
-          errorMsg += ` - ${response.statusText}`;
-        }
-        throw new Error(errorMsg);
-      }
-      const savedAmenity = await response.json();
-      console.log('Amenity saved:', savedAmenity);
+      const savedAmenity = await apiService.post(apiUrl, payload, getAccessTokenSilently);
       setSubmitStatus('success');
       setLastSavedInfo(`Code ${formData.code}: ${formData.description}`);
       setFormData(initialAmenityState);

@@ -17,7 +17,8 @@ import {
   Modal
 } from '@carbon/react';
 import { AddFilled, Edit, TrashCan } from '@carbon/icons-react';
-import { getApiBaseUrl } from '../../services/config';
+import { useAuth0 } from '@auth0/auth0-react';
+import { apiService } from '../../services/apiService';
 
 // Styles
 const containerStyle = {
@@ -43,6 +44,7 @@ const tableTitleContainerStyle = {
 
 function MediaTypeList() {
   const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
   const [mediaTypes, setMediaTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -85,20 +87,13 @@ function MediaTypeList() {
     setDeleteSuccess(null);
 
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/mediaType?page=${page}&size=${size}`);
-      if (!response.ok) {
-        throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch media types'}`);
-      }
-      const data = await response.json();
-      
+      const data = await apiService.mediaTypes.getAll(page, size, getAccessTokenSilently);
       const mappedTypes = (data.content || []).map(type => ({
         id: type.mediaTypeId.toString(),
         mediaTypeId: type.mediaTypeId,
         mediaTypeName: type.mediaTypeName,
         mediaTypeDescription: type.mediaTypeDescription
       }));
-
       setMediaTypes(mappedTypes);
       setTotalElements(data.totalElements || 0);
       setCurrentPage(data.number || 0);
@@ -111,7 +106,7 @@ function MediaTypeList() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getAccessTokenSilently]);
 
   useEffect(() => {
     fetchMediaTypes(currentPage, pageSize);
@@ -148,27 +143,15 @@ function MediaTypeList() {
 
   const handleDeleteConfirm = async () => {
     if (!typeToDeleteId) return;
-
     setLoading(true);
     setDeleteError(null);
     setDeleteSuccess(null);
-
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/mediaType/${typeToDeleteId}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP Error ${response.status}: ${errorBody || 'Could not delete media type'}`);
-      }
-
+      await apiService.mediaTypes.delete(typeToDeleteId, getAccessTokenSilently);
       setDeleteSuccess('Media type deleted successfully.');
       closeDeleteModal();
       setSelectedRows(new Set());
       fetchMediaTypes(currentPage, pageSize);
-
     } catch (err) {
       console.error('Error deleting media type:', err);
       setDeleteError(err.message || 'Could not delete media type. Please try again.');

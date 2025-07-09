@@ -12,7 +12,8 @@ import {
   Stack,
 } from '@carbon/react';
 import { Save, Close } from '@carbon/icons-react';
-import { getApiBaseUrl } from '../../services/config';
+import { useAuth0 } from '@auth0/auth0-react';
+import { apiService } from '../../services/apiService';
 
 // Styles
 const containerStyle = {
@@ -39,6 +40,7 @@ const actionButtonStyle = {
 function AmenityTypeForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
   const isEditMode = !!id;
 
   const [amenityType, setAmenityType] = useState({
@@ -58,12 +60,7 @@ function AmenityTypeForm() {
     if (isEditMode) {
       const fetchAmenityType = async () => {
         try {
-          const baseUrl = getApiBaseUrl();
-          const response = await fetch(`${baseUrl}/api/amenityType/${id}`);
-          if (!response.ok) {
-            throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch amenity type'}`);
-          }
-          const data = await response.json();
+          const data = await apiService.get(`/amenityType/${id}`, getAccessTokenSilently);
           setAmenityType(data);
           setInitialAmenityType(data);
         } catch (err) {
@@ -73,10 +70,9 @@ function AmenityTypeForm() {
           setLoading(false);
         }
       };
-
       fetchAmenityType();
     }
-  }, [id, isEditMode]);
+  }, [id, isEditMode, getAccessTokenSilently]);
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -94,32 +90,20 @@ function AmenityTypeForm() {
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(null);
-
     try {
-      const baseUrl = getApiBaseUrl();
-      const url = isEditMode
-        ? `${baseUrl}/api/amenityType/${id}`
-        : `${baseUrl}/api/amenityType`;
-      
-      const response = await fetch(url, {
-        method: isEditMode ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(amenityType),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP Error ${response.status}: ${errorBody || 'Could not save amenity type'}`);
+      let savedData;
+      if (isEditMode) {
+        savedData = await apiService.put(`/amenityType/${id}`, amenityType, getAccessTokenSilently);
+      } else {
+        savedData = await apiService.post('/amenityType', amenityType, getAccessTokenSilently);
       }
-
-      const savedData = await response.json();
       setSaveSuccess('Amenity type saved successfully.');
       setHasChanges(false);
       setInitialAmenityType(savedData);
       if (!isEditMode) {
-        navigate(`/amenity-types/${savedData.amenityTypeId}`);
+        setTimeout(() => {
+          navigate('/types/amenity');
+        }, 1500);
       }
     } catch (err) {
       console.error('Error saving amenity type:', err);

@@ -11,8 +11,11 @@ import {
   Grid,
   Column,
   Stack,
+  Dropdown,
 } from '@carbon/react';
 import { Save, Close } from '@carbon/icons-react';
+import { useAuth0 } from '@auth0/auth0-react';
+import { apiService } from '../services/apiService';
 
 // Estilos (pueden ser los mismos que AmenityEditForm)
 const containerStyle = {
@@ -38,12 +41,15 @@ const actionButtonStyle = {
 
 function AmenityNewForm() {
   const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
 
   const [amenity, setAmenity] = useState({
     amenityCode: '',
     amenityDescription: '',
     amenityType: '',
   });
+  const [amenityTypes, setAmenityTypes] = useState([]);
+  const [loadingTypes, setLoadingTypes] = useState(true);
   // No necesitamos initialAmenity para el formulario de creación
   // pero hasChanges sí es útil para el modal de cancelación.
   const [initialFormState] = useState({ // Para comparar si hay cambios
@@ -59,6 +65,25 @@ function AmenityNewForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
+  useEffect(() => {
+    const fetchAmenityTypes = async () => {
+      setLoadingTypes(true);
+      try {
+        const data = await apiService.amenityTypes.getAll(0, 100, getAccessTokenSilently);
+        const options = (data.content || []).map(type => ({
+          id: type.amenityTypeName,
+          text: type.amenityTypeName,
+        }));
+        setAmenityTypes(options);
+      } catch (err) {
+        setSaveError('Failed to load amenity types');
+      } finally {
+        setLoadingTypes(false);
+      }
+    };
+    fetchAmenityTypes();
+  }, [getAccessTokenSilently]);
+
   // --- Handle Form Changes ---
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -70,6 +95,13 @@ function AmenityNewForm() {
     });
     setSaveError(null); // Limpiar errores al cambiar
     setSaveSuccess(null); // Limpiar éxito al cambiar
+  };
+
+  const handleDropdownChange = ({ selectedItem }) => {
+    setAmenity(prev => ({ ...prev, amenityType: selectedItem ? selectedItem.id : '' }));
+    setSaveError(null);
+    setSaveSuccess(null);
+    setHasChanges(true);
   };
 
   // --- Handle Save (Create New) ---
@@ -87,20 +119,7 @@ function AmenityNewForm() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8090/api/amenities`, { // URL para POST
-        method: 'POST', // Método POST para crear
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(amenity),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP Error ${response.status}: ${errorBody || 'Could not create amenity.'}`);
-      }
-
-      // const newAmenityData = await response.json(); // La API podría devolver la amenity creada
+      await apiService.post('/amenities', amenity, getAccessTokenSilently);
       setSaveSuccess('Amenity created successfully!');
       setAmenity({ amenityCode: '', amenityDescription: '', amenityType: '' }); // Limpiar formulario
       setHasChanges(false); // Resetear cambios
@@ -169,13 +188,16 @@ function AmenityNewForm() {
                 invalid={saveError && !amenity.amenityDescription}
                 invalidText="Description is required."
               />
-              <TextInput
+              <Dropdown
                 id="amenityType"
-                name="amenityType"
-                labelText="Type"
-                value={amenity.amenityType}
-                onChange={handleChange}
+                titleText="Type"
+                label="Select Amenity Type"
+                items={amenityTypes}
+                itemToString={item => (item ? item.text : '')}
+                selectedItem={amenityTypes.find(item => item.id === amenity.amenityType) || null}
+                onChange={handleDropdownChange}
                 required
+                disabled={loadingTypes || isSaving}
                 invalid={saveError && !amenity.amenityType}
                 invalidText="Type is required."
               />

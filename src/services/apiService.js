@@ -97,7 +97,6 @@ export const apiService = {
   delete: async (endpoint, getAccessTokenSilently) => {
     const token = await getAccessTokenSilently();
     const url = createApiUrl(endpoint);
-    
     const response = await fetch(url, {
       method: 'DELETE',
       headers: {
@@ -105,12 +104,19 @@ export const apiService = {
         'Authorization': `Bearer ${token}`,
       },
     });
-    
     if (!response.ok) {
       throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
     }
-    
-    return response.json();
+    // Solo intenta parsear JSON si hay contenido
+    if (response.status !== 204 && response.headers.get('content-length') !== '0') {
+      try {
+        return await response.json();
+      } catch {
+        // Si no hay JSON, retorna null
+        return null;
+      }
+    }
+    return null;
   },
 
   // User Hotel Role specific methods
@@ -183,5 +189,35 @@ export const apiService = {
     getById: async (id, getAccessTokenSilently) => {
       return apiService.get(`/roles/${id}`, getAccessTokenSilently);
     }
-  }
+  },
+
+  // Media Type management methods
+  mediaTypes: {
+    getAll: async (page = 0, size = 25, getAccessTokenSilently) => {
+      return apiService.get(`/mediaType?page=${page}&size=${size}`, getAccessTokenSilently);
+    },
+    delete: async (id, getAccessTokenSilently) => {
+      return apiService.delete(`/mediaType/${id}`, getAccessTokenSilently);
+    }
+  },
+
+  // Amenity Type management methods
+  amenityTypes: {
+    getAll: async (page = 0, size = 25, getAccessTokenSilently) => {
+      return apiService.get(`/amenityType?page=${page}&size=${size}`, getAccessTokenSilently);
+    },
+    delete: async (id, getAccessTokenSilently) => {
+      return apiService.delete(`/amenityType/${id}`, getAccessTokenSilently);
+    }
+  },
+
+  // Room Type management methods
+  roomTypes: {
+    getAll: async (page = 0, size = 25, getAccessTokenSilently) => {
+      return apiService.get(`/roomType?page=${page}&size=${size}`, getAccessTokenSilently);
+    },
+    delete: async (id, getAccessTokenSilently) => {
+      return apiService.delete(`/roomType/${id}`, getAccessTokenSilently);
+    }
+  },
 }; 

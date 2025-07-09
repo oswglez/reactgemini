@@ -12,7 +12,8 @@ import {
   Stack,
 } from '@carbon/react';
 import { Save, Close } from '@carbon/icons-react';
-import { getApiBaseUrl } from '../../services/config';
+import { useAuth0 } from '@auth0/auth0-react';
+import { apiService } from '../../services/apiService';
 
 // Styles
 const containerStyle = {
@@ -39,6 +40,7 @@ const actionButtonStyle = {
 function MediaTypeForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
   const isEditMode = !!id;
 
   const [mediaType, setMediaType] = useState({
@@ -58,12 +60,7 @@ function MediaTypeForm() {
     if (isEditMode) {
       const fetchMediaType = async () => {
         try {
-          const baseUrl = getApiBaseUrl();
-          const response = await fetch(`${baseUrl}/api/mediaType/${id}`);
-          if (!response.ok) {
-            throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch media type'}`);
-          }
-          const data = await response.json();
+          const data = await apiService.get(`/mediaType/${id}`, getAccessTokenSilently);
           setMediaType(data);
           setInitialMediaType(data);
         } catch (err) {
@@ -73,10 +70,9 @@ function MediaTypeForm() {
           setLoading(false);
         }
       };
-
       fetchMediaType();
     }
-  }, [id, isEditMode]);
+  }, [id, isEditMode, getAccessTokenSilently]);
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -94,32 +90,20 @@ function MediaTypeForm() {
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(null);
-
     try {
-      const baseUrl = getApiBaseUrl();
-      const url = isEditMode
-        ? `${baseUrl}/api/mediaType/${id}`
-        : `${baseUrl}/api/mediaType`;
-      
-      const response = await fetch(url, {
-        method: isEditMode ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(mediaType),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP Error ${response.status}: ${errorBody || 'Could not save media type'}`);
+      let savedData;
+      if (isEditMode) {
+        savedData = await apiService.put(`/mediaType/${id}`, mediaType, getAccessTokenSilently);
+      } else {
+        savedData = await apiService.post('/mediaType', mediaType, getAccessTokenSilently);
       }
-
-      const savedData = await response.json();
       setSaveSuccess('Media type saved successfully.');
       setHasChanges(false);
       setInitialMediaType(savedData);
       if (!isEditMode) {
-        navigate(`/media-types/${savedData.mediaTypeId}`);
+        setTimeout(() => {
+          navigate('/types/media');
+        }, 1500);
       }
     } catch (err) {
       console.error('Error saving media type:', err);

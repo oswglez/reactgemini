@@ -17,7 +17,8 @@ import {
   Modal
 } from '@carbon/react';
 import { AddFilled, Edit, TrashCan } from '@carbon/icons-react';
-import { getApiBaseUrl } from '../../services/config';
+import { useAuth0 } from '@auth0/auth0-react';
+import { apiService } from '../../services/apiService';
 
 // Styles
 const containerStyle = {
@@ -43,6 +44,7 @@ const tableTitleContainerStyle = {
 
 function RoomTypeList() {
   const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
   const [roomTypes, setRoomTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -85,20 +87,13 @@ function RoomTypeList() {
     setDeleteSuccess(null);
 
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/roomType?page=${page}&size=${size}`);
-      if (!response.ok) {
-        throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch room types'}`);
-      }
-      const data = await response.json();
-      
+      const data = await apiService.roomTypes.getAll(page, size, getAccessTokenSilently);
       const mappedTypes = (data.content || []).map(type => ({
         id: type.roomTypeId.toString(),
         roomTypeId: type.roomTypeId,
         roomTypeName: type.roomTypeName,
         roomTypeDescription: type.roomTypeDescription
       }));
-
       setRoomTypes(mappedTypes);
       setTotalElements(data.totalElements || 0);
       setCurrentPage(data.number || 0);
@@ -111,7 +106,7 @@ function RoomTypeList() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getAccessTokenSilently]);
 
   useEffect(() => {
     fetchRoomTypes(currentPage, pageSize);
@@ -148,28 +143,15 @@ function RoomTypeList() {
 
   const handleDeleteConfirm = async () => {
     if (!typeToDeleteId) return;
-
     setLoading(true);
     setDeleteError(null);
     setDeleteSuccess(null);
-
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/roomType/${typeToDeleteId}`, {
-
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP Error ${response.status}: ${errorBody || 'Could not delete room type'}`);
-      }
-
+      await apiService.roomTypes.delete(typeToDeleteId, getAccessTokenSilently);
       setDeleteSuccess('Room type deleted successfully.');
       closeDeleteModal();
       setSelectedRows(new Set());
       fetchRoomTypes(currentPage, pageSize);
-
     } catch (err) {
       console.error('Error deleting room type:', err);
       setDeleteError(err.message || 'Could not delete room type. Please try again.');

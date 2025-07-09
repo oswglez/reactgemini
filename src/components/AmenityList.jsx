@@ -217,6 +217,7 @@ function AmenityList() {
   );
 
   const headers = [
+    { key: 'select', header: '' },
     { key: 'amenityCode', header: 'Amenity Code' },
     { key: 'amenityDescription', header: 'Description' },
     { key: 'amenityType', header: 'Type' },
