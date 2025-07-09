@@ -15,6 +15,8 @@ import {
 } from '@carbon/react';
 import { Add, TrashCan } from '@carbon/icons-react';
 import { getApiBaseUrl } from '../services/config';
+import { useAuth0 } from '@auth0/auth0-react';
+import { apiService } from '../services/apiService';
 
 // Estado inicial usando nombres en inglés
 const initialAmenityState = {
@@ -24,19 +26,20 @@ const initialAmenityState = {
 };
 
 // Opciones para AmenityType (Asegúrate que los 'id' coincidan con backend)
-const amenityTypeItems = [
-  { id: 'WIFI', text: 'WiFi / Internet' },
-  { id: 'TV', text: 'Television' },
-  { id: 'AIR_CONDITIONING', text: 'Air Conditioning' },
-];
+// const amenityTypeItems = [
+//   { id: 'WIFI', text: 'WiFi / Internet' },
+//   { id: 'TV', text: 'Television' },
+//   { id: 'AIR_CONDITIONING', text: 'Air Conditioning' },
+// ];
 
 function AmenityForm() {
   const { hotelId } = useParams();
+  const { getAccessTokenSilently } = useAuth0();
   const [formData, setFormData] = useState(initialAmenityState);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState(null);
-  const [lastSavedInfo, setLastSavedInfo] = useState('');
+  // const [submitStatus, setSubmitStatus] = useState(null);
+  // const [lastSavedInfo, setLastSavedInfo] = useState('');
   const [amenityTypeOptions, setAmenityTypeOptions] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [optionsError, setOptionsError] = useState(null);
@@ -117,8 +120,8 @@ function AmenityForm() {
   // --- Envío (sin cambios) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitStatus(null);
-    setLastSavedInfo('');
+    // setSubmitStatus(null);
+    // setLastSavedInfo('');
     if (!validateForm() || !hotelId) {
       return;
     }
@@ -128,38 +131,16 @@ function AmenityForm() {
       amenityType: formData.type,
       amenityDescription: formData.description,
     };
-    const baseUrl = getApiBaseUrl();
-    const apiUrl = `${baseUrl}/api/amenities?hotelId=${hotelId}`;
-    console.log(`Sending Payload to ${apiUrl}:`, JSON.stringify(payload, null, 2));
-
+    const apiUrl = `/amenities?hotelId=${hotelId}`;
     try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        let errorMsg = `HTTP Error: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.message || JSON.stringify(errorData);
-        } catch (err) {
-          console.warn('Failed to parse error response as JSON:', err);
-          errorMsg += ` - ${response.statusText}`;
-        }
-        throw new Error(errorMsg);
-      }
-      const savedAmenity = await response.json();
-      console.log('Amenity saved:', savedAmenity);
-      setSubmitStatus('success');
-      setLastSavedInfo(`Code ${formData.code}: ${formData.description}`);
+      await apiService.post(apiUrl, payload, getAccessTokenSilently);
+      // setSubmitStatus('success');
+      // setLastSavedInfo(`Code ${formData.code}: ${formData.description}`);
       setFormData(initialAmenityState);
       setErrors({});
     } catch (error) {
       console.error('Error saving amenity:', error);
-      setSubmitStatus('error');
+      // setSubmitStatus('error');
       setErrors((prev) => ({
         ...prev,
         api: error.message || 'An unexpected error occurred while saving the amenity.',

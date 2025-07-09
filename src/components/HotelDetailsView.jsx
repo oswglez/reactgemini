@@ -150,41 +150,7 @@ function HotelDetailsView() {
           <DetailItem label="Total Rooms" value={hotelData.totalRooms} />
         </Column>
 
-        {/* Column 2 */}
-        <Column lg={8} md={4} sm={4}>
-          {/* Translated Section Title */}
-          <h4
-            style={{
-              borderBottom: '1px solid #e0e0e0',
-              paddingBottom: '0.5rem',
-              marginBottom: '1rem',
-              color: '#161616',
-            }}
-          >
-            Integrations
-          </h4>
-          <p style={{ color: labelStyle.color, marginBottom: '0.5rem' }}>
-            PMS:
-          </p>
-          {/* Translated Labels */}
-          <DetailItem label="PMS Provider" value={hotelData.pmsVendor} />
-          <DetailItem label="Hotel ID (PMS)" value={hotelData.pmsHotelId} />
-          {/* We don't show pmsToken for security */}
 
-          <p
-            style={{
-              color: labelStyle.color,
-              marginTop: '1.5rem',
-              marginBottom: '0.5rem',
-            }}
-          >
-            CRS:
-          </p>
-          {/* Translated Labels */}
-          <DetailItem label="CRS Provider" value={hotelData.crsVendor} />
-          <DetailItem label="Hotel ID (CRS)" value={hotelData.crsHotelId} />
-          {/* We don't show crsToken for security */}
-        </Column>
 
         {/* Disclaimer Row */}
         <Column lg={16} md={8} sm={4} style={{ marginTop: '1rem' }}>

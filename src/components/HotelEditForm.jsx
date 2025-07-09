@@ -1,6 +1,6 @@
 // src/components/forms/HotelEditForm.jsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Form,
   FormLabel,
@@ -58,7 +58,14 @@ const hotelStatusItems = [
 
 function HotelEditForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { hotelId } = useParams();
+  
+  // Get user role info from navigation state
+  const userRoleInfo = location.state?.userRoleInfo;
+  
+  // Determine if form should be disabled based on user permissions
+  const isFormDisabled = userRoleInfo && !userRoleInfo.canEdit;
 
   // Eliminar logs de ambiente
   // console.log('HotelEditForm - API_BASE_URL:', API_BASE_URL);
@@ -115,6 +122,7 @@ function HotelEditForm() {
           const callingCode = getCountryCallingCode(country.code);
           label = `${country.name} (+${callingCode})`;
         } catch (e) {
+          console.log('Error loading country list:', e);
           console.warn(`Could not get calling code for country: ${country.name} (${country.code})`);
         }
         return { id: country.code, text: label, code: country.code };
@@ -187,6 +195,7 @@ function HotelEditForm() {
       }
 
       setInitialDataLoading(true);
+//      await new Promise(res => setTimeout(res, 2000)); // 2 segundos de delay para ver el spinning
 
       try {
         const apiUrl = `/hotels/${hotelId}/withRelations`;
@@ -493,110 +502,45 @@ function HotelEditForm() {
 
   }, [originalHotelData, countryDropdownItems, chains, brands]); // Dependencias para resetear
 
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    setIsSubmitting(true);
-    setFeedback({ type: '', message: '' });
-
-    const currentCountryCode = selectedCountry ? selectedCountry.code : null;
-    const finalValidatedMainPhone = validatePhoneNumber(mainPhoneNumberRaw, currentCountryCode, "Hotel Phone", setMainPhoneNumberError);
-    const finalValidatedContactPhone = validatePhoneNumber(contactMobilePhoneRaw, currentCountryCode, "Contact Phone", setContactMobilePhoneError);
-
-    if (!hotelName || !selectedBrand?.id || !selectedHotelStatus?.id || !contactFirstName || !contactLastName || !contactEmail || !selectedCountry?.id) {
-      setFeedback({ type: 'error', message: 'Please fill in all required fields marked with an asterisk (*).' });
-      setIsSubmitting(false); window.scrollTo({ top: 0, behavior: 'smooth' }); return;
-    }
-    if ((mainPhoneNumberRaw.trim() !== '' && !finalValidatedMainPhone) || (contactMobilePhoneRaw.trim() !== '' && !finalValidatedContactPhone)) {
-      setFeedback({ type: 'error', message: 'Please correct the invalid phone numbers.' });
-      setIsSubmitting(false); window.scrollTo({ top: 0, behavior: 'smooth' }); return;
-    }
-
-    const payload = {
-      hotelCode: hotelCode || null,
-      hotelName,
-      hotelStatus: selectedHotelStatus.id,
-      brandId: parseInt(selectedBrand.id, 10),
-      localPhone: finalValidatedMainPhone,
-      disclaimer: disclaimer || null,
-      hotelWebsiteUrl: website || null,
-      mainContact: {
-        firstName: contactFirstName,
-        lastName: contactLastName,
-        contactTitle: contactTitle || null,
-        contactEmail,
-        contactMobileNumber: finalValidatedContactPhone,
-        contactType: 'MAIN',
-      },
-      mainAddress: {
-        country: currentCountryCode,
-        state: stateProvince || null,
-        city: city || null,
-        street: streetAddress || null,
-        postalCode: zipCode || null,
-        addressType: 'MAIN',
-      },
-      floor: floor !== undefined && floor !== null ? floor : 0,
-    };
-    console.log('Submitting Update Form Data to Backend:', JSON.stringify(payload, null, 2));
-
-    try {
-      const response = await authenticatedFetch(`/hotels/updateWithDetails/${hotelId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`API Error ${response.status}: ${errorBody || response.statusText}`);
-      }
-      const result = await response.json();
-      setFeedback({ type: 'success', message: `Hotel "${result.hotelName || payload.hotelName}" updated successfully!` });
-      setOriginalHotelData(prev => ({...prev, ...payload, // Actualizar data original con lo guardado
-        brandName: selectedBrand?.text, chainName: selectedChain?.text // Añadir nombres para el reset
-    })); 
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      // No navegar automáticamente para que el usuario vea el mensaje.
-      // setTimeout(() => navigate('/hotel-list'), 2000); 
-    } catch (error) {
-      console.error('Error updating hotel:', error);
-      setFeedback({ type: 'error', message: `Error updating hotel: ${error.message}` });
-    } finally {
-      setIsSubmitting(false);
-    }
+  // Compara los valores actuales con los originales para detectar cambios
+  const isFormDirty = () => {
+    if (!originalHotelData) return false;
+    return (
+      hotelCode !== originalHotelData.hotelCode ||
+      hotelName !== originalHotelData.hotelName ||
+      selectedHotelStatus?.id !== originalHotelData.hotelStatus ||
+      streetAddress !== (originalHotelData.mainAddress?.street || '') ||
+      selectedCountry?.id !== (originalHotelData.mainAddress?.countryCode || '') ||
+      stateProvince !== (originalHotelData.mainAddress?.stateProvince || '') ||
+      city !== (originalHotelData.mainAddress?.city || '') ||
+      zipCode !== (originalHotelData.mainAddress?.zipCode || '') ||
+      mainPhoneNumberRaw !== (originalHotelData.mainContact?.contactMobileNumber || '') ||
+      website !== originalHotelData.hotelWebsiteUrl ||
+      disclaimer !== originalHotelData.disclaimer ||
+      contactFirstName !== (originalHotelData.mainContact?.firstName || '') ||
+      contactLastName !== (originalHotelData.mainContact?.lastName || '') ||
+      contactTitle !== (originalHotelData.mainContact?.contactTitle || '') ||
+      contactMobilePhoneRaw !== (originalHotelData.mainContact?.contactMobileNumber || '') ||
+      contactEmail !== (originalHotelData.mainContact?.contactEmail || '') ||
+      selectedChain?.id !== (originalHotelData.chainId ? originalHotelData.chainId.toString() : '') ||
+      selectedBrand?.id !== (originalHotelData.brandId ? originalHotelData.brandId.toString() : '')
+    );
   };
-  
-  const handleDeleteAttempt = () => setOpenDeleteModal(true);
-  const proceedWithDelete = async () => {
-    setOpenDeleteModal(false);
-    setIsSubmitting(true); 
-    setFeedback({ type: '', message: '' });
-    try {
-      const response = await authenticatedFetch(`/hotels/${hotelId}/soft-delete`, {
-        method: 'PUT',
-      });
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`API Error ${response.status}: ${errorBody || response.statusText}`);
-      }
-      setFeedback({ type: 'success', message: `Hotel (ID: ${hotelId}) has been marked as deleted.` });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      setTimeout(() => navigate('/hotel-list'), 2500);
-    } catch (error) {
-      console.error('Error deleting hotel:', error);
-      setFeedback({ type: 'error', message: `Error deleting hotel: ${error.message}` });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  const closeDeleteModal = () => setOpenDeleteModal(false);
 
   const handleCancelAttempt = () => {
-    // Aquí podrías añadir una lógica para verificar si hay cambios sin guardar
-    // Si hay cambios, muestra el modal. Si no, simplemente navega.
-    // Por ahora, siempre muestra el modal como en HotelNewForm.
-    setOpenCancelModal(true);
+    if (!isFormDisabled && isFormDirty()) {
+      // Debug: muestra diferencias
+      console.log('Diferencias detectadas:', {
+        hotelCode, original: originalHotelData.hotelCode,
+        hotelName, original: originalHotelData.hotelName,
+        // ...agrega aquí los campos que quieras comparar
+      });
+    }
+    if (isFormDisabled || !isFormDirty()) {
+      navigate('/hotel-list');
+    } else {
+      setOpenCancelModal(true);
+    }
   };
   const proceedWithCancel = () => {
     setOpenCancelModal(false);
@@ -605,9 +549,17 @@ function HotelEditForm() {
   };
   const closeModal = () => setOpenCancelModal(false);
 
-  const validateForm = () => {
-    // Implementa la lógica para validar el formulario
-    return true; // Placeholder, actual implementación necesaria
+  const handleDeleteAttempt = () => setOpenDeleteModal(true);
+  const closeDeleteModal = () => setOpenDeleteModal(false);
+
+  const proceedWithDelete = () => {
+    // Add your delete logic here
+    setOpenDeleteModal(false);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Add your form submission logic here
   };
 
   if (initialDataLoading) {
@@ -648,6 +600,23 @@ function HotelEditForm() {
       )}
 
       <Form onSubmit={handleSubmit}>
+        {/* Show read-only warning if user doesn't have edit permissions */}
+        {userRoleInfo && !userRoleInfo.canEdit && (
+          <InlineNotification
+            kind="warning"
+            title="Read-Only Mode"
+            subtitle="You don't have permission to edit this hotel. All fields are disabled."
+            lowContrast
+            style={{ marginBottom: '1rem' }}
+          />
+        )}
+        
+        {/* Wrapper to disable only text input fields when user doesn't have edit permissions */}
+        <div style={{
+          opacity: isFormDisabled ? 0.8 : 1,
+          transition: 'opacity 0.2s ease-in-out'
+        }}>
+        
         {/* --- Sección Chain & Brand --- */}
         <h2 style={formSectionTitleStyle}>Chain & Brand</h2>
         <div style={formRowStyle}>
@@ -666,7 +635,7 @@ function HotelEditForm() {
                     else setBrands([createSelectChainFirstItem()]);
                 }
               }}
-              selectedItem={selectedChain} disabled={loadingChains || countryDropdownItems[0]?.id.startsWith('loading-')} style={{ width: '100%' }}
+              selectedItem={selectedChain} disabled={loadingChains || countryDropdownItems[0]?.id.startsWith('loading-') || isFormDisabled} style={{ width: '100%' }}
             />
           </div>
         </div>
@@ -678,7 +647,7 @@ function HotelEditForm() {
               label={loadingBrands ? "Loading brands..." : (selectedBrand?.text || (brands[0]?.id.startsWith('placeholder-') || brands[0]?.id.startsWith('select-chain-') ? brands[0]?.text : "Select brand..."))}
               items={brands} itemToString={(item) => (item ? item.text : '')}
               onChange={({ selectedItem }) => setSelectedBrand(selectedItem.id.startsWith('placeholder-') || selectedItem.id.startsWith('select-chain-') || selectedItem.id.startsWith('no-items-') ? null : selectedItem)}
-              selectedItem={selectedBrand} disabled={!selectedChain || loadingBrands || brands.length === 0 || brands[0].id.startsWith('select-chain-') || brands[0].id.startsWith('loading-')} style={{ width: '100%' }}
+              selectedItem={selectedBrand} disabled={!selectedChain || loadingBrands || brands.length === 0 || brands[0].id.startsWith('select-chain-') || brands[0].id.startsWith('loading-') || isFormDisabled} style={{ width: '100%' }}
             />
           </div>
         </div>
@@ -687,11 +656,11 @@ function HotelEditForm() {
         <h2 style={formSectionTitleStyle}>Property Info</h2>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="hotel-code">Hotel Code</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="hotel-code" labelText="" placeholder="Internal Hotel Code" value={hotelCode} onChange={(e) => setHotelCode(e.target.value)} style={{ width: '100%' }}/></div>
+          <div style={inputContainerStyle}><TextInput id="hotel-code" labelText="" placeholder="Internal Hotel Code" value={hotelCode} onChange={(e) => setHotelCode(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }}/></div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="hotel-name">Name <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}><TextInput id="hotel-name" labelText="" placeholder="Official Property Name" value={hotelName} onChange={(e) => setHotelName(e.target.value)} style={{ width: '100%' }} required /></div>
+          <div style={inputContainerStyle}><TextInput id="hotel-name" labelText="" placeholder="Official Property Name" value={hotelName} onChange={(e) => setHotelName(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} required /></div>
         </div>
          <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="hotel-status-dropdown">Hotel Status <span style={{color: 'red'}}>*</span></FormLabel>
@@ -705,12 +674,13 @@ function HotelEditForm() {
               onChange={({ selectedItem }) => setSelectedHotelStatus(selectedItem.id.startsWith('placeholder-') ? null : selectedItem)} 
               selectedItem={selectedHotelStatus} 
               style={{ width: '100%' }}
+              disabled={isFormDisabled}
             />
           </div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="street-address">Street Address</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="street-address" labelText="" placeholder="e.g., 123 Main St" value={streetAddress} onChange={(e) => setStreetAddress(e.target.value)} style={{ width: '100%' }} /></div>
+          <div style={inputContainerStyle}><TextInput id="street-address" labelText="" placeholder="e.g., 123 Main St" value={streetAddress} onChange={(e) => setStreetAddress(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} /></div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="country-dropdown">Country <span style={{color: 'red'}}>*</span></FormLabel>
@@ -731,21 +701,21 @@ function HotelEditForm() {
                     setContactMobilePhoneError('');
                 }
               }}
-              selectedItem={selectedCountry} disabled={countryDropdownItems[0]?.id.startsWith('loading-')} style={{ width: '100%' }}
+              selectedItem={selectedCountry} disabled={countryDropdownItems[0]?.id.startsWith('loading-') || isFormDisabled} style={{ width: '100%' }}
             />
           </div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="state-province">State / Province</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="state-province" labelText="" placeholder="e.g., Florida" value={stateProvince} onChange={(e) => setStateProvince(e.target.value)} style={{ width: '100%' }} /></div>
+          <div style={inputContainerStyle}><TextInput id="state-province" labelText="" placeholder="e.g., Florida" value={stateProvince} onChange={(e) => setStateProvince(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} /></div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="city">City</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="city" labelText="" placeholder="e.g., Miami" value={city} onChange={(e) => setCity(e.target.value)} style={{ width: '100%' }}/></div>
+          <div style={inputContainerStyle}><TextInput id="city" labelText="" placeholder="e.g., Miami" value={city} onChange={(e) => setCity(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }}/></div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="zip-code">Zip Code / Postal Code</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="zip-code" labelText="" placeholder="e.g., 33101" value={zipCode} onChange={(e) => setZipCode(e.target.value)} style={{ width: '100%' }} /></div>
+          <div style={inputContainerStyle}><TextInput id="zip-code" labelText="" placeholder="e.g., 33101" value={zipCode} onChange={(e) => setZipCode(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} /></div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="main-phone-number">Phone Number</FormLabel>
@@ -756,32 +726,32 @@ function HotelEditForm() {
               value={mainPhoneNumberFormatted}
               onChange={(e) => handlePhoneNumberChange(e.target.value, selectedCountry?.code, setMainPhoneNumberRaw, setMainPhoneNumberFormatted, setMainPhoneNumberError)}
               onBlur={() => validatePhoneNumber(mainPhoneNumberRaw, selectedCountry?.code, "Hotel Phone", setMainPhoneNumberError)}
-              invalid={!!mainPhoneNumberError} invalidText={mainPhoneNumberError} style={{ width: '100%' }}
+              invalid={!!mainPhoneNumberError} invalidText={mainPhoneNumberError} disabled={isFormDisabled} style={{ width: '100%' }}
             />
           </div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="website">Website</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="website" type="url" labelText="" placeholder="e.g., https://www.example.com" value={website} onChange={(e) => setWebsite(e.target.value)} style={{ width: '100%' }} /></div>
+          <div style={inputContainerStyle}><TextInput id="website" type="url" labelText="" placeholder="e.g., https://www.example.com" value={website} onChange={(e) => setWebsite(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} /></div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="disclaimer">Disclaimer</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="disclaimer" labelText="" placeholder="Short disclaimer text" value={disclaimer} onChange={(e) => setDisclaimer(e.target.value)} style={{ width: '100%' }} /></div>
+          <div style={inputContainerStyle}><TextInput id="disclaimer" labelText="" placeholder="Short disclaimer text" value={disclaimer} onChange={(e) => setDisclaimer(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} /></div>
         </div>
 
         {/* --- Sección Contact Info (Main Contact) --- */}
         <h2 style={formSectionTitleStyle}>Contact Info (Main Contact)</h2>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="contact-first-name">First Name <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}><TextInput id="contact-first-name" labelText="" placeholder="Contact's first name" value={contactFirstName} onChange={(e) => setContactFirstName(e.target.value)} style={{ width: '100%' }} required /></div>
+          <div style={inputContainerStyle}><TextInput id="contact-first-name" labelText="" placeholder="Contact's first name" value={contactFirstName} onChange={(e) => setContactFirstName(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} required /></div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="contact-last-name">Last Name <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}><TextInput id="contact-last-name" labelText="" placeholder="Contact's last name" value={contactLastName} onChange={(e) => setContactLastName(e.target.value)} style={{ width: '100%' }} required /></div>
+          <div style={inputContainerStyle}><TextInput id="contact-last-name" labelText="" placeholder="Contact's last name" value={contactLastName} onChange={(e) => setContactLastName(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} required /></div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="contact-title">Title</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="contact-title" labelText="" placeholder="e.g., General Manager" value={contactTitle} onChange={(e) => setContactTitle(e.target.value)} style={{ width: '100%' }} /></div>
+          <div style={inputContainerStyle}><TextInput id="contact-title" labelText="" placeholder="e.g., General Manager" value={contactTitle} onChange={(e) => setContactTitle(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} /></div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="contact-mobile-phone">Phone Number</FormLabel>
@@ -792,22 +762,31 @@ function HotelEditForm() {
               value={contactMobilePhoneFormatted}
               onChange={(e) => handlePhoneNumberChange(e.target.value, selectedCountry?.code, setContactMobilePhoneRaw, setContactMobilePhoneFormatted, setContactMobilePhoneError)}
               onBlur={() => validatePhoneNumber(contactMobilePhoneRaw, selectedCountry?.code, "Contact Phone", setContactMobilePhoneError)}
-              invalid={!!contactMobilePhoneError} invalidText={contactMobilePhoneError} style={{ width: '100%' }}
+              invalid={!!contactMobilePhoneError} invalidText={contactMobilePhoneError} disabled={isFormDisabled} style={{ width: '100%' }}
             />
           </div>
         </div>
         <div style={formRowStyle}>
           <FormLabel style={labelStyle} htmlFor="contact-email">Email <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}><TextInput id="contact-email" type="email" labelText="" placeholder="e.g., contact@example.com" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} style={{ width: '100%' }} required /></div>
+          <div style={inputContainerStyle}><TextInput id="contact-email" type="email" labelText="" placeholder="e.g., contact@example.com" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} required /></div>
         </div>
         
         <div style={buttonContainerStyle}>
           <Button kind="secondary" type="button" onClick={handleCancelAttempt} disabled={isSubmitting}>Cancel</Button>
-          <Button kind="danger--tertiary" type="button" onClick={handleDeleteAttempt} disabled={isSubmitting} style={{marginRight: 'auto'}}>Delete Hotel</Button>
-          <Button type="submit" kind="primary" disabled={isSubmitting || loadingChains || loadingBrands || initialDataLoading}>
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
-          </Button>
+          {userRoleInfo && userRoleInfo.canDelete && (
+            <Button kind="danger--tertiary" type="button" onClick={handleDeleteAttempt} disabled={isSubmitting} style={{marginRight: 'auto'}}>Delete Hotel</Button>
+          )}
+          {userRoleInfo && userRoleInfo.canEdit ? (
+            <Button type="submit" kind="primary" disabled={isSubmitting || loadingChains || loadingBrands || initialDataLoading}>
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </Button>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#525252', fontSize: '0.875rem' }}>
+              <span>Read-only mode - You don't have permission to edit this hotel</span>
+            </div>
+          )}
         </div>
+        </div> {/* Close wrapper div */}
       </Form>
 
       <ComposedModal open={openCancelModal} onClose={closeModal} preventCloseOnClickOutside={false} size="sm">

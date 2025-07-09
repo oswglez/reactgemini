@@ -97,7 +97,6 @@ export const apiService = {
   delete: async (endpoint, getAccessTokenSilently) => {
     const token = await getAccessTokenSilently();
     const url = createApiUrl(endpoint);
-    
     const response = await fetch(url, {
       method: 'DELETE',
       headers: {
@@ -105,12 +104,19 @@ export const apiService = {
         'Authorization': `Bearer ${token}`,
       },
     });
-    
     if (!response.ok) {
       throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
     }
-    
-    return response.json();
+    // Solo intenta parsear JSON si hay contenido
+    if (response.status !== 204 && response.headers.get('content-length') !== '0') {
+      try {
+        return await response.json();
+      } catch {
+        // Si no hay JSON, retorna null
+        return null;
+      }
+    }
+    return null;
   },
 
   // User Hotel Role specific methods
@@ -138,6 +144,79 @@ export const apiService = {
     // Delete a user hotel role
     delete: async (id, getAccessTokenSilently) => {
       return apiService.delete(`/user-hotel-roles/${id}`, getAccessTokenSilently);
+    }
+  },
+
+  // User context and permissions methods
+  userContext: {
+    // Get user context for a specific hotel
+    getForHotel: async (hotelId, getAccessTokenSilently) => {
+      return apiService.get(`/auth/user-context?hotelId=${hotelId}`, getAccessTokenSilently);
+    },
+
+    // Get current user context
+    getCurrent: async (getAccessTokenSilently) => {
+      return apiService.get('/auth/user-context', getAccessTokenSilently);
+    },
+
+    // Check if user can edit hotels based on their roles
+    canEditHotel: (userContext) => {
+      if (!userContext || !userContext.currentRoles || userContext.currentRoles.length === 0) {
+        return false;
+      }
+
+      // Define roles that can edit hotels (HOTEL_ADMIN and above)
+      const editableRoles = ['SUPER_USER', 'CHAIN_ADMIN', 'BRAND_ADMIN', 'HOTEL_ADMIN'];
+      
+      // Check if user has any of the editable roles
+      return userContext.currentRoles.some(role => 
+        editableRoles.includes(role.roleName)
+      );
+    },
+
+    // Check if user can delete hotels based on their roles
+    canDeleteHotel: (userContext) => {
+      if (!userContext || !userContext.currentRoles || userContext.currentRoles.length === 0) {
+        return false;
+      }
+
+      // Define roles that can delete hotels (HOTEL_ADMIN and above)
+      const deletableRoles = ['SUPER_USER', 'CHAIN_ADMIN', 'BRAND_ADMIN', 'HOTEL_ADMIN'];
+      
+      // Check if user has any of the deletable roles
+      return userContext.currentRoles.some(role => 
+        deletableRoles.includes(role.roleName)
+      );
+    },
+
+    // Get the highest role level for display purposes
+    getHighestRoleLevel: (userContext) => {
+      if (!userContext || !userContext.currentRoles || userContext.currentRoles.length === 0) {
+        return 'NO_ROLE';
+      }
+
+      const roleHierarchy = {
+        'SUPER_USER': 7,
+        'CHAIN_ADMIN': 6,
+        'BRAND_ADMIN': 5,
+        'HOTEL_ADMIN': 4,
+        'HOTEL_MANAGER': 3,
+        'HOTEL_STAFF': 2,
+        'HOTEL_VIEWER': 1
+      };
+
+      let highestRole = 'HOTEL_VIEWER';
+      let highestLevel = 1;
+
+      userContext.currentRoles.forEach(role => {
+        const level = roleHierarchy[role.roleName] || 0;
+        if (level > highestLevel) {
+          highestLevel = level;
+          highestRole = role.roleName;
+        }
+      });
+
+      return highestRole;
     }
   },
 
@@ -183,5 +262,35 @@ export const apiService = {
     getById: async (id, getAccessTokenSilently) => {
       return apiService.get(`/roles/${id}`, getAccessTokenSilently);
     }
-  }
+  },
+
+  // Media Type management methods
+  mediaTypes: {
+    getAll: async (page = 0, size = 25, getAccessTokenSilently) => {
+      return apiService.get(`/mediaType?page=${page}&size=${size}`, getAccessTokenSilently);
+    },
+    delete: async (id, getAccessTokenSilently) => {
+      return apiService.delete(`/mediaType/${id}`, getAccessTokenSilently);
+    }
+  },
+
+  // Amenity Type management methods
+  amenityTypes: {
+    getAll: async (page = 0, size = 25, getAccessTokenSilently) => {
+      return apiService.get(`/amenityType?page=${page}&size=${size}`, getAccessTokenSilently);
+    },
+    delete: async (id, getAccessTokenSilently) => {
+      return apiService.delete(`/amenityType/${id}`, getAccessTokenSilently);
+    }
+  },
+
+  // Room Type management methods
+  roomTypes: {
+    getAll: async (page = 0, size = 25, getAccessTokenSilently) => {
+      return apiService.get(`/roomType?page=${page}&size=${size}`, getAccessTokenSilently);
+    },
+    delete: async (id, getAccessTokenSilently) => {
+      return apiService.delete(`/roomType/${id}`, getAccessTokenSilently);
+    }
+  },
 }; 

@@ -109,13 +109,6 @@ function AmenityList() {
   }, [sortColumn, sortDirection]);
 
   // --- DataTable Headers ---
-  const dataTableHeaders = [
-    { key: 'select', header: '', isSortable: false, style: { width: '60px' } },
-    { key: 'amenityCode', header: 'Code', isSortable: true, style: { width: '100px' } },
-    { key: 'amenityDescription', header: 'Description', isSortable: true, style: { width: 'auto' } },
-    { key: 'amenityType', header: 'Type', isSortable: true, style: { width: '150px' } },
-  ];
-
   const tableRows = amenities;
 
   // --- Pagination Handlers ---
@@ -217,48 +210,17 @@ function AmenityList() {
   );
 
   const headers = [
+    { key: 'select', header: '' },
     { key: 'amenityCode', header: 'Amenity Code' },
     { key: 'amenityDescription', header: 'Description' },
-    { key: 'amenityType', header: 'Type' },
-    { key: 'actions', header: 'Actions' }
+    { key: 'amenityType', header: 'Type' }
   ];
 
   const rows = filteredAmenities.map(amenity => ({
     id: amenity.id,
     amenityCode: amenity.amenityCode || 'N/A',
     amenityDescription: amenity.amenityDescription || 'N/A',
-    amenityType: amenity.amenityType || 'N/A',
-    actions: (
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <Button
-          kind="ghost"
-          size="sm"
-          iconDescription="View"
-          hasIconOnly
-          onClick={() => navigate(`/amenities/${amenity.amenityId}`)}
-        >
-          <View />
-        </Button>
-        <Button
-          kind="ghost"
-          size="sm"
-          iconDescription="Edit"
-          hasIconOnly
-          onClick={() => navigate(`/amenities/edit/${amenity.amenityId}`)}
-        >
-          <Edit />
-        </Button>
-        <Button
-          kind="ghost"
-          size="sm"
-          iconDescription="Delete"
-          hasIconOnly
-          onClick={() => handleDeleteConfirm()}
-        >
-          <TrashCan />
-        </Button>
-      </div>
-    )
+    amenityType: amenity.amenityType || 'N/A'
   }));
 
   return (

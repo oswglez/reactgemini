@@ -7,7 +7,8 @@ import {
   Modal, // Import Modal
 } from '@carbon/react';
 import { AddFilled, ArrowUp, ArrowDown, TrashCan } from '@carbon/icons-react'; // Import TrashCan
-import { useAuthenticatedFetch } from '../services/apiService';
+import { useAuthenticatedFetch, apiService } from '../services/apiService';
+import { useAuth0 } from '@auth0/auth0-react';
 
 // ... (styles and decodeHotelStatus without changes)
 const containerStyle = { marginTop: '1rem', width: '100%', padding: '20px', backgroundColor: '#f9f9f9' };
@@ -23,6 +24,7 @@ const decodeHotelStatus = (statusKey) => {
 
 function HotelList() {
   const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,6 +38,9 @@ function HotelList() {
   const [hotelToDeleteId, setHotelToDeleteId] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(null);
+  
+  // State for user role information
+  const [userRoleInfo, setUserRoleInfo] = useState(null);
 
   const authenticatedFetch = useAuthenticatedFetch();
 
@@ -78,6 +83,46 @@ function HotelList() {
   useEffect(() => {
     fetchHotels();
   }, [fetchHotels]); // fetchHotels already includes the necessary dependencies
+
+  // Function to get user role information
+  const getUserRoleInfo = async () => {
+    try {
+      const response = await apiService.get('/auth/user-context', getAccessTokenSilently);
+      if (response && response.currentRoles) {
+        // Find the highest role level
+        const roleHierarchy = ['SUPER_USER', 'CHAIN_ADMIN', 'BRAND_ADMIN', 'HOTEL_ADMIN', 'HOTEL_MANAGER', 'HOTEL_STAFF', 'HOTEL_VIEWER'];
+        let highestRole = null;
+        
+        for (const role of response.currentRoles) {
+          const roleIndex = roleHierarchy.indexOf(role.roleName);
+          if (roleIndex !== -1 && (highestRole === null || roleIndex < roleHierarchy.indexOf(highestRole))) {
+            highestRole = role.roleName;
+          }
+        }
+        
+        setUserRoleInfo({
+          roles: response.currentRoles,
+          highestRole: highestRole,
+          canEdit: highestRole && ['SUPER_USER', 'CHAIN_ADMIN', 'BRAND_ADMIN', 'HOTEL_ADMIN'].includes(highestRole),
+          canDelete: highestRole && ['SUPER_USER', 'CHAIN_ADMIN', 'BRAND_ADMIN'].includes(highestRole)
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user role info:', error);
+      // Default to most restrictive permissions
+      setUserRoleInfo({
+        roles: [],
+        highestRole: null,
+        canEdit: false,
+        canDelete: false
+      });
+    }
+  };
+
+  // Fetch user role information on component mount
+  useEffect(() => {
+    getUserRoleInfo();
+  }, []);
 
   const handleSort = useCallback((columnKey) => {
     console.log(`handleSort (called by DataTable) for column: ${columnKey}`);
@@ -234,22 +279,25 @@ function HotelList() {
           <Button
             kind="secondary"
             style={actionButtonStyle}
-            disabled={selectedRows.size !== 1} // Enabled only if one row is selected
+            disabled={selectedRows.size !== 1} // Only disable if no selection - anyone can view details
             onClick={() => {
               if (selectedRows.size === 1) {
                 const selectedHotelId = Array.from(selectedRows)[0];
-                navigate(`/hotel/edit/${selectedHotelId}`);
+                // Pass user role info as state to the edit form
+                navigate(`/hotel/edit/${selectedHotelId}`, { 
+                  state: { userRoleInfo } 
+                });
               }
             }}
           >
-            View Property Details
+            {userRoleInfo && !userRoleInfo.canEdit ? 'View Property Details (Read Only)' : 'View Property Details'}
           </Button>
           {/* Delete Button */}
           <Button
             kind="danger" // 'danger' for destructive actions
             renderIcon={TrashCan}
             style={actionButtonStyle}
-            disabled={selectedRows.size !== 1} // Enabled only if ONE row is selected
+            disabled={selectedRows.size !== 1 || (userRoleInfo && !userRoleInfo.canDelete)} // Disable if no selection or no delete permission
             onClick={openDeleteModal}
           >
             Delete Property

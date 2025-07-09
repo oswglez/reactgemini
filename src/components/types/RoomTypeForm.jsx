@@ -12,6 +12,8 @@ import {
   Stack,
 } from '@carbon/react';
 import { Save, Close } from '@carbon/icons-react';
+import { useAuth0 } from '@auth0/auth0-react';
+import { apiService } from '../../services/apiService';
 
 // Styles
 const containerStyle = {
@@ -38,6 +40,7 @@ const actionButtonStyle = {
 function RoomTypeForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
   const isEditMode = !!id;
 
   const [roomType, setRoomType] = useState({
@@ -57,11 +60,7 @@ function RoomTypeForm() {
     if (isEditMode) {
       const fetchRoomType = async () => {
         try {
-          const response = await fetch(`http://localhost:8090/api/roomType/${id}`);
-          if (!response.ok) {
-            throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch room type'}`);
-          }
-          const data = await response.json();
+          const data = await apiService.get(`/roomType/${id}`, getAccessTokenSilently);
           setRoomType(data);
           setInitialRoomType(data);
         } catch (err) {
@@ -71,10 +70,9 @@ function RoomTypeForm() {
           setLoading(false);
         }
       };
-
       fetchRoomType();
     }
-  }, [id, isEditMode]);
+  }, [id, isEditMode, getAccessTokenSilently]);
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -92,36 +90,20 @@ function RoomTypeForm() {
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(null);
-
     try {
-      const url = isEditMode
-        ? `http://localhost:8090/api/roomType/${id}`
-        : 'http://localhost:8090/api/roomType';
-      
-      const response = await fetch(url, {
-        method: isEditMode ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(roomType),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP Error ${response.status}: ${errorBody || 'Could not save room type'}`);
+      let savedType;
+      if (isEditMode) {
+        savedType = await apiService.put(`/roomType/${id}`, roomType, getAccessTokenSilently);
+      } else {
+        savedType = await apiService.post('/roomType', roomType, getAccessTokenSilently);
       }
-
-      const savedType = await response.json();
       setSaveSuccess('Room type saved successfully!');
       setInitialRoomType(savedType);
       setRoomType(savedType);
       setHasChanges(false);
-
-      // Navigate back after successful save
       setTimeout(() => {
         navigate('/types/room');
       }, 1500);
-
     } catch (err) {
       console.error('Error saving room type:', err);
       setSaveError(err.message || 'Could not save room type. Please try again.');

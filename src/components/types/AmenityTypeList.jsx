@@ -17,7 +17,8 @@ import {
   Modal
 } from '@carbon/react';
 import { AddFilled, Edit, TrashCan } from '@carbon/icons-react';
-import { getApiBaseUrl } from '../../services/config';
+import { useAuth0 } from '@auth0/auth0-react';
+import { apiService } from '../../services/apiService';
 
 // Styles
 const containerStyle = {
@@ -43,6 +44,7 @@ const tableTitleContainerStyle = {
 
 function AmenityTypeList() {
   const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
   const [amenityTypes, setAmenityTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -85,20 +87,13 @@ function AmenityTypeList() {
     setDeleteSuccess(null);
 
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/amenityType?page=${page}&size=${size}`);
-      if (!response.ok) {
-        throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch amenity types'}`);
-      }
-      const data = await response.json();
-      
+      const data = await apiService.amenityTypes.getAll(page, size, getAccessTokenSilently);
       const mappedTypes = (data.content || []).map(type => ({
         id: type.amenityTypeId.toString(),
         amenityTypeId: type.amenityTypeId,
         amenityTypeName: type.amenityTypeName,
         amenityTypeDescription: type.amenityTypeDescription
       }));
-
       setAmenityTypes(mappedTypes);
       setTotalElements(data.totalElements || 0);
       setCurrentPage(data.number || 0);
@@ -111,7 +106,7 @@ function AmenityTypeList() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getAccessTokenSilently]);
 
   useEffect(() => {
     fetchAmenityTypes(currentPage, pageSize);
@@ -148,27 +143,15 @@ function AmenityTypeList() {
 
   const handleDeleteConfirm = async () => {
     if (!typeToDeleteId) return;
-
     setLoading(true);
     setDeleteError(null);
     setDeleteSuccess(null);
-
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/amenityType/${typeToDeleteId}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP Error ${response.status}: ${errorBody || 'Could not delete amenity type'}`);
-      }
-
+      await apiService.amenityTypes.delete(typeToDeleteId, getAccessTokenSilently);
       setDeleteSuccess('Amenity type deleted successfully.');
       closeDeleteModal();
       setSelectedRows(new Set());
       fetchAmenityTypes(currentPage, pageSize);
-
     } catch (err) {
       console.error('Error deleting amenity type:', err);
       setDeleteError(err.message || 'Could not delete amenity type. Please try again.');
