@@ -17,6 +17,8 @@ import { Add, TrashCan } from '@carbon/icons-react';
 import { getApiBaseUrl } from '../services/config';
 import { useAuth0 } from '@auth0/auth0-react';
 import { apiService } from '../services/apiService';
+import { useAuth0 } from '@auth0/auth0-react';
+import { apiService } from '../services/apiService';
 
 // Estado inicial usando nombres en inglés
 const initialAmenityState = {
@@ -34,6 +36,7 @@ const initialAmenityState = {
 
 function AmenityForm() {
   const { hotelId } = useParams();
+  const { getAccessTokenSilently } = useAuth0();
   const { getAccessTokenSilently } = useAuth0();
   const [formData, setFormData] = useState(initialAmenityState);
   const [errors, setErrors] = useState({});
