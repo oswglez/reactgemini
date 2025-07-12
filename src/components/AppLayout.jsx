@@ -28,17 +28,6 @@ function AppLayout() {
         height: '100vh' // O 'calc(100vh - alturaDelHeader)' si usas un Header fijo
       }}>
         <Sidebar />
-        <Content
-          id="main-content"
-          style={{
-            flexGrow: 1,
-            overflowY: 'auto',
-            // Carbon <Content> gestiona su padding y tema.
-            // padding: '1rem', // Puedes añadir padding extra si lo deseas
-          }}
-        >
-          <Outlet /> 
-        </Content>
       </div>
     </>
   );
