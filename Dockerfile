@@ -16,7 +16,7 @@ RUN npm install
 COPY . .
 
 # Construir la aplicación para producción
-# El script "build" usualmente genera la carpeta "build" o "dist"
+# Vite genera la carpeta "dist" por defecto
 RUN npm run build
 # Si usas yarn:
 # RUN yarn build
@@ -24,12 +24,11 @@ RUN npm run build
 # Etapa 2: Servir la aplicación con Nginx
 FROM nginx:stable-alpine
 
-# Asumimos que tu comando de build (npm run build) genera una carpeta "build".
-# Si genera una carpeta "dist", cambia "/app/build" a "/app/dist" abajo.
+# Copiar los archivos construidos desde la etapa builder
+# Vite genera la carpeta "dist"
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# (Opcional pero recomendado) Copiar una configuración personalizada de Nginx
-# Este archivo default.conf lo crearás en el siguiente sub-paso.
+# Copiar la configuración personalizada de Nginx
 COPY default.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

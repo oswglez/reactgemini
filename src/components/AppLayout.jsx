@@ -1,35 +1,34 @@
 // src/components/AppLayout.jsx
 import React from 'react';
+import Sidebar from './Sidebar';
 import { Outlet } from 'react-router-dom';
-import Sidebar from './Sidebar'; // El Sidebar de Carbon definido arriba
-import { Content } from '@carbon/react';
-// Opcional: Si quieres un Header de Carbon global
-// import { Header, HeaderContainer, HeaderName } from '@carbon/react';
+
+const layoutStyle = {
+  display: 'flex',
+  minHeight: '100vh',
+};
+
+const sidebarContainerStyle = {
+  flex: '0 0 250px',
+  zIndex: 2,
+};
+
+const contentStyle = {
+  flex: 1,
+  minHeight: 0,
+  overflow: 'auto',
+};
 
 function AppLayout() {
-  // console.log('AppLayout (Carbon Standard Version) renderizando...'); // Puedes añadir este log
   return (
-    <>
-      {/*
-      // EJEMPLO DE HEADER DE CARBON (OPCIONAL)
-      <HeaderContainer
-        render={({ isSideNavExpanded, onClickSideNavExpand }) => (
-          <Header aria-label="Expectra Platform Name">
-            <HeaderName href="/dashboard" prefix="Expectra">
-              [AI Hotel Platform]
-            </HeaderName>
-          </Header>
-        )}
-      />
-      */}
-      
-      <div style={{ 
-        display: 'flex', 
-        height: '100vh' // O 'calc(100vh - alturaDelHeader)' si usas un Header fijo
-      }}>
+    <div style={layoutStyle}>
+      <div style={sidebarContainerStyle}>
         <Sidebar />
       </div>
-    </>
+      <main style={contentStyle}>
+        <Outlet />
+      </main>
+    </div>
   );
 }
 

@@ -6,7 +6,7 @@ import { CaretDown, CaretUp } from '@carbon/icons-react';
 // --- ASEGÚRATE DE TENER ESTAS DEFINICIONES DE ESTILO ---
 const sidebarStyle = {
   width: '250px',
-  background: '#3d1fcc', // Púrpura algo más oscuro
+  background: '#0f62fe', // Azul Carbon activo
   padding: '1rem',
   height: '100vh',
   overflowY: 'auto',
@@ -21,17 +21,17 @@ const navListStyle = {
 // Estilo base para enlaces
 const linkStyle = {
   display: 'block',
-  color: 'white', // <--- Color blanco para el texto
-  textDecoration: 'none', // <--- Sin subrayado
+  color: 'white',
+  textDecoration: 'none',
   padding: '0.75rem 1rem',
   marginBottom: '0.5rem',
   borderRadius: '4px',
-  transition: 'background-color 0.2s ease',
+  transition: 'background-color 0.2s, color 0.2s',
 };
 
 // Estilo para el enlace activo (usando isActive de NavLink)
 const activeStyle = {
-  backgroundColor: 'rgba(255, 255, 255, 0.2)', // Fondo blanco semitransparente
+  backgroundColor: 'rgba(255, 255, 255, 0.2)', // Fondo blanco semitransparente (original)
   fontWeight: 'bold',
 };
 

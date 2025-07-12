@@ -48,9 +48,19 @@ function AmenityList() {
 
     try {
       let url = `/amenities?page=${page}&size=${size}`;
-      if (column && direction) {
-        url += `&sort=${column},${direction.toLowerCase()}`;
+      
+      // Mapear las columnas del frontend a las del backend
+      const columnMapping = {
+        'amenityCode': 'amenityCode',
+        'amenityDescription': 'amenityDescription', 
+        'amenityType': 'amenityType'
+      };
+      
+      if (column && direction && columnMapping[column]) {
+        const backendColumn = columnMapping[column];
+        url += `&sort=${backendColumn},${direction.toLowerCase()}`;
       }
+      
       console.log('Fetching URL:', url);
       const response = await authenticatedFetch(url);
       if (!response.ok) {
@@ -89,17 +99,28 @@ function AmenityList() {
 
   // --- Sort Handlers ---
   const handleSort = useCallback((columnKey) => {
-    console.log(`handleSort (called by DataTable) for column: ${columnKey}`);
-    if (sortColumn === columnKey) {
-      setSortDirection(prevDirection => (prevDirection === 'ASC' ? 'DESC' : 'ASC'));
-    } else {
-      setSortColumn(columnKey);
-      setSortDirection('ASC');
+    console.log(`handleSort called for column: ${columnKey}`);
+    console.log(`Current sort state: column=${sortColumn}, direction=${sortDirection}`);
+    
+    // Ignorar la columna de selección
+    if (columnKey === 'select') {
+      return;
     }
+    
+    let newDirection = 'ASC';
+    if (sortColumn === columnKey) {
+      newDirection = sortDirection === 'ASC' ? 'DESC' : 'ASC';
+    }
+    
+    console.log(`Setting new sort: column=${columnKey}, direction=${newDirection}`);
+      setSortColumn(columnKey);
+    setSortDirection(newDirection);
+    
+    // Reset a la primera página cuando se cambia el ordenamiento
     if (currentPage !== 0) {
       setCurrentPage(0);
     }
-  }, [sortColumn, currentPage]);
+  }, [sortColumn, sortDirection, currentPage]);
 
   const getSortIcon = useCallback((columnKey) => {
     if (sortColumn === columnKey) {
@@ -210,10 +231,10 @@ function AmenityList() {
   );
 
   const headers = [
-    { key: 'select', header: '' },
-    { key: 'amenityCode', header: 'Amenity Code' },
-    { key: 'amenityDescription', header: 'Description' },
-    { key: 'amenityType', header: 'Type' }
+    { key: 'select', header: '', isSortable: false },
+    { key: 'amenityCode', header: 'Amenity Code', isSortable: true },
+    { key: 'amenityDescription', header: 'Description', isSortable: true },
+    { key: 'amenityType', header: 'Type', isSortable: true }
   ];
 
   const rows = filteredAmenities.map(amenity => ({
@@ -273,6 +294,30 @@ function AmenityList() {
         </div>
       </div>
 
+      {sortColumn && (
+        <div style={{ 
+          marginBottom: '1rem', 
+          padding: '0.5rem', 
+          backgroundColor: '#e0e0e0', 
+          borderRadius: '4px',
+          fontSize: '0.875rem'
+        }}>
+          <strong>Sorted by:</strong> {headers.find(h => h.key === sortColumn)?.header} 
+          ({sortDirection === 'ASC' ? 'Ascending' : 'Descending'})
+        </div>
+      )}
+
+      <div style={{ marginBottom: '1rem' }}>
+        <Search
+          size="md"
+          labelText="Search amenities"
+          placeholder="Search by code, description, or type..."
+          value={searchTerm}
+          onChange={handleSearch}
+          style={{ maxWidth: '400px' }}
+        />
+      </div>
+
       {loading && <Loading description="Loading amenities..." withOverlay={false} style={{ marginTop: '2rem' }} />}
       {!loading && error && (
         <InlineNotification
@@ -327,9 +372,14 @@ function AmenityList() {
                                   handleSort(header.key);
                                 }
                               }}
-                              style={{ ...header.style, ...(restOfHeaderProps.style || {}) }}
+                              style={{ 
+                                ...header.style, 
+                                ...(restOfHeaderProps.style || {}),
+                                cursor: header.isSortable ? 'pointer' : 'default'
+                              }}
                               isSortable={header.isSortable}
                             >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                               {header.header === '' && amenities.length > 0 ? (
                                 <Checkbox
                                   id="select-all-checkbox"
@@ -338,10 +388,13 @@ function AmenityList() {
                                   checked={areAllRowsSelected}
                                   indeterminate={isIndeterminate}
                                 />
-                              ) : header.header}
+                                ) : (
+                                  <span>{header.header}</span>
+                                )}
                               {header.isSortable && header.header !== '' && (
                                 <span style={{ marginLeft: '8px' }}>{getSortIcon(header.key)}</span>
                               )}
+                              </div>
                             </TableHeader>
                           );
                         })}

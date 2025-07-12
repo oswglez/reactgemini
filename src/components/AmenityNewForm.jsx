@@ -126,7 +126,7 @@ function AmenityNewForm() {
 
       // Opcional: Redirigir después de crear con éxito
       setTimeout(() => {
-        navigate(-1); // Navegar a la lista de amenities
+        navigate('/amenities-list'); // Navegar a la lista de amenities
       }, 2000); // Esperar 2 segundos para que el usuario vea el mensaje
 
     } catch (err) {
@@ -142,13 +142,13 @@ function AmenityNewForm() {
     if (hasChanges) {
       setShowCancelModal(true);
     } else {
-      navigate('-1'); // Si no hay cambios, volver directamente
+      navigate('/amenities-list'); // Si no hay cambios, volver directamente
     }
   };
 
   const handleCancelConfirm = () => {
     setShowCancelModal(false);
-    navigate(-1); // Navegar a la lista de amenities
+    navigate('/amenities-list'); // Navegar a la lista de amenities
   };
 
   const handleCancelClose = () => {
