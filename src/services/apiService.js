@@ -293,4 +293,47 @@ export const apiService = {
       return apiService.delete(`/roomType/${id}`, getAccessTokenSilently);
     }
   },
+
+  // Room Units management methods
+  roomUnits: {
+    // Get all rooms for a specific hotel with DTO format
+    getByHotelId: async (hotelId, getAccessTokenSilently) => {
+      return apiService.get(`/hotels/${hotelId}/roomsDTO`, getAccessTokenSilently);
+    },
+
+    // Get all rooms for a hotel with pagination
+    getByHotelIdPaginated: async (hotelId, page = 0, size = 25, getAccessTokenSilently) => {
+      return apiService.get(`/rooms/hotel/${hotelId}?page=${page}&size=${size}`, getAccessTokenSilently);
+    },
+
+    // Get a specific room by ID
+    getById: async (roomId, getAccessTokenSilently) => {
+      return apiService.get(`/rooms/${roomId}`, getAccessTokenSilently);
+    },
+
+    // Create a new room for a hotel
+    create: async (hotelId, roomData, getAccessTokenSilently) => {
+      return apiService.post(`/rooms/${hotelId}`, roomData, getAccessTokenSilently);
+    },
+
+    // Update a room
+    update: async (roomId, roomData, getAccessTokenSilently) => {
+      return apiService.put(`/rooms/${roomId}`, roomData, getAccessTokenSilently);
+    },
+
+    // Delete a room
+    delete: async (roomId, getAccessTokenSilently) => {
+      return apiService.delete(`/rooms/${roomId}`, getAccessTokenSilently);
+    },
+
+    // Get room amenities
+    getAmenities: async (hotelId, roomId, getAccessTokenSilently) => {
+      return apiService.get(`/rooms/${hotelId}/roomId/${roomId}/amenities`, getAccessTokenSilently);
+    },
+
+    // Get room media
+    getMedia: async (hotelId, roomId, getAccessTokenSilently) => {
+      return apiService.get(`/rooms/${hotelId}/roomId/${roomId}/media`, getAccessTokenSilently);
+    }
+  },
 }; 

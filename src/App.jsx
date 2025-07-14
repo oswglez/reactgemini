@@ -13,7 +13,7 @@ import EnvironmentIndicator from './components/EnvironmentIndicator';
 
 // Vistas/Componentes
 import Dashboard from './components/Dashboard';
-import HotelList from './components/HotelList2';
+import HotelList from './components/HotelList';
 import HotelNewForm from './components/HotelNewForm';
 import HotelEditForm from './components/HotelEditForm';
 import HotelDetailsView from './components/HotelDetailsView';
@@ -122,7 +122,7 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Route>
           {/* Rutas de Creación y Edición de Rooms */}
-          <Route path="/hotels/:hotelId/rooms" element={<RoomList />} />
+          <Route path="/hotels/:hotelId/roomsDTO" element={<RoomList />} />
           <Route path="/rooms/edit/:roomId" element={<RoomEditForm />} />
           <Route path="/hotels/:hotelId/rooms/new" element={<RoomNewForm />} />
 

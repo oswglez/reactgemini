@@ -2,105 +2,104 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Loading, InlineNotification, Button, Checkbox, Pagination, Modal, Search, Tag, Tile
+  Loading, InlineNotification, Button, Checkbox, Pagination, DataTable,
+  TableContainer, Table, TableHead, TableRow, TableHeader, TableBody, TableCell,
+  Modal, // Import Modal
 } from '@carbon/react';
-import { 
-  AddFilled, TrashCan, Edit, View, Location, Building, User, Globe, StarFilled 
-} from '@carbon/icons-react';
+import { AddFilled, ArrowUp, ArrowDown, TrashCan } from '@carbon/icons-react'; // Import TrashCan
 import { useAuthenticatedFetch, apiService } from '../services/apiService';
 import { useAuth0 } from '@auth0/auth0-react';
 
-// Estilos modernos inline
-const modernContainerStyle = { padding: '24px', backgroundColor: '#f8f9fa', minHeight: '100vh' };
-const headerStyle = { textAlign: 'center', marginBottom: '32px', color: '#161616' };
-const titleStyle = { fontSize: '2.5rem', fontWeight: '300', marginBottom: '8px', color: '#161616' };
-const subtitleStyle = { fontSize: '1rem', color: '#525252', maxWidth: '600px', margin: '0 auto' };
-const controlsContainerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' };
-const searchContainerStyle = { flex: '1', maxWidth: '400px' };
-const actionButtonsStyle = { display: 'flex', gap: '12px', flexWrap: 'wrap' };
-const statsContainerStyle = { display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' };
-const statCardStyle = { backgroundColor: 'white', padding: '16px 20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', flex: '1', minWidth: '120px', textAlign: 'center' };
-const statNumberStyle = { fontSize: '2rem', fontWeight: '600', color: '#0f62fe', marginBottom: '4px' };
-const statLabelStyle = { fontSize: '0.875rem', color: '#525252', textTransform: 'uppercase', letterSpacing: '0.5px' };
-const cardsGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px', marginBottom: '32px' };
-const hotelCardStyle = { backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid #e0e0e0', transition: 'all 0.2s ease', cursor: 'pointer', position: 'relative' };
-const selectedCardStyle = { ...hotelCardStyle, border: '2px solid #0f62fe', boxShadow: '0 4px 12px rgba(15, 98, 254, 0.2)' };
-const cardHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' };
-const hotelNameStyle = { fontSize: '1.25rem', fontWeight: '600', color: '#161616', marginBottom: '4px' };
-const hotelCodeStyle = { fontSize: '0.875rem', color: '#525252', fontWeight: '500' };
-const statusTagStyle = { marginLeft: 'auto' };
-const cardContentStyle = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' };
-const infoItemStyle = { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem' };
-const infoLabelStyle = { color: '#525252', fontWeight: '500', minWidth: '80px' };
-const infoValueStyle = { color: '#161616', fontWeight: '400' };
-const cardActionsStyle = { display: 'flex', gap: '8px', flexWrap: 'wrap' };
+// ... (styles and decodeHotelStatus without changes)
+const containerStyle = { marginTop: '1rem', width: '100%', padding: '20px', backgroundColor: '#f9f9f9' };
+const actionButtonStyle = { marginRight: '0.5rem' };
+const headerButtonContainerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' };
+const tableTitleContainerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' };
 
 const decodeHotelStatus = (statusKey) => {
   const statusMap = { A: 'Active', P: 'Pending', I: 'Inactive' };
   return statusMap[statusKey] || statusKey;
 };
-const getStatusKind = (status) => {
-  const statusMap = { A: 'green', P: 'orange', I: 'red' };
-  return statusMap[status] || 'gray';
-};
+
 
 function HotelList() {
   const navigate = useNavigate();
   const { getAccessTokenSilently } = useAuth0();
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(12);
+  const [pageSize, setPageSize] = useState(25);
   const [totalElements, setTotalElements] = useState(0);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [sortColumn, setSortColumn] = useState('hotelName');
+  const [sortDirection, setSortDirection] = useState('ASC');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [hotelToDeleteId, setHotelToDeleteId] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(null);
+  
+  // State for user role information
   const [userRoleInfo, setUserRoleInfo] = useState(null);
 
   const authenticatedFetch = useAuthenticatedFetch();
 
-  // Fetch hotels
+  // Memoize the fetch function to avoid unnecessary recreations
   const fetchHotels = useCallback(async () => {
     setLoading(true);
+    setError(null);
+    setDeleteError(null);
+    setDeleteSuccess(null);
     try {
       let url = `/hotels/hotelList?page=${currentPage}&size=${pageSize}`;
-      url += `&sort=hotelName,asc`;
+      if (sortColumn && sortDirection) {
+        // Map contactName to contactLastName for API sorting
+        const apiSortColumn = sortColumn === 'contactName' ? 'contactLastName' : sortColumn;
+        url += `&sort=${apiSortColumn},${sortDirection.toLowerCase()}`;
+      }
+      console.log('Fetching URL:', url);
       const response = await authenticatedFetch(url);
       if (!response.ok) {
         const errorBody = await response.text();
         throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch list'}. Body: ${errorBody}`);
       }
       const data = await response.json();
+      console.log('Data received from API:', data);
       setHotels(data.content || []);
       setTotalElements(data.totalElements || 0);
       setCurrentPage(data.number || 0);
-      setPageSize(data.size || 12);
+      setPageSize(data.size || 25);
     } catch (err) {
+      setError(err.message || 'Could not load hotel list.');
+      console.error('Error fetching hotels:', err);
       setHotels([]);
       setTotalElements(0);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, authenticatedFetch]);
+  }, [currentPage, pageSize, sortColumn, sortDirection, authenticatedFetch]); // Include authenticatedFetch as dependency
 
-  useEffect(() => { fetchHotels(); }, [fetchHotels]);
+  // Use useEffect without fetchHotels as dependency
+  useEffect(() => {
+    fetchHotels();
+  }, [fetchHotels]); // fetchHotels already includes the necessary dependencies
 
-  // User role info
+  // Function to get user role information
   const getUserRoleInfo = async () => {
     try {
       const response = await apiService.get('/auth/user-context', getAccessTokenSilently);
       if (response && response.currentRoles) {
+        // Find the highest role level
         const roleHierarchy = ['SUPER_USER', 'CHAIN_ADMIN', 'BRAND_ADMIN', 'HOTEL_ADMIN', 'HOTEL_MANAGER', 'HOTEL_STAFF', 'HOTEL_VIEWER'];
         let highestRole = null;
+        
         for (const role of response.currentRoles) {
           const roleIndex = roleHierarchy.indexOf(role.roleName);
           if (roleIndex !== -1 && (highestRole === null || roleIndex < roleHierarchy.indexOf(highestRole))) {
             highestRole = role.roleName;
           }
         }
+        
         setUserRoleInfo({
           roles: response.currentRoles,
           highestRole: highestRole,
@@ -109,24 +108,64 @@ function HotelList() {
         });
       }
     } catch (error) {
-      setUserRoleInfo({ roles: [], highestRole: null, canEdit: false, canDelete: false });
+      console.error('Error fetching user role info:', error);
+      // Default to most restrictive permissions
+      setUserRoleInfo({
+        roles: [],
+        highestRole: null,
+        canEdit: false,
+        canDelete: false
+      });
     }
   };
-  useEffect(() => { getUserRoleInfo(); }, []);
 
-  // Search
-  const handleSearch = (event) => {
-    setSearchTerm(event.target.value);
-    setCurrentPage(0);
-  };
-  const filteredHotels = hotels.filter(hotel =>
-    hotel.hotelName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    hotel.hotelCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    hotel.hotelCity?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    hotel.hotelCountry?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Fetch user role information on component mount
+  useEffect(() => {
+    getUserRoleInfo();
+  }, []);
 
-  // Pagination
+  const handleSort = useCallback((columnKey) => {
+    console.log(`handleSort (called by DataTable) for column: ${columnKey}`);
+    
+    if (sortColumn === columnKey) {
+      setSortDirection(prevDirection => (prevDirection === 'ASC' ? 'DESC' : 'ASC'));
+    } else {
+      setSortColumn(columnKey);
+      setSortDirection('ASC');
+    }
+    if (currentPage !== 0) {
+      setCurrentPage(0);
+    }
+  }, [sortColumn, currentPage]);
+
+  const getSortIcon = useCallback((columnKey) => {
+    if (sortColumn === columnKey) {
+      return sortDirection === 'ASC' ? <ArrowUp size={16} /> : <ArrowDown size={16} />;
+    }
+    return null;
+  }, [sortColumn, sortDirection]);
+
+  const dataTableHeaders = [
+    { key: 'select', header: '', isSortable: false, style: { width: '60px' } },
+    { key: 'hotelCode', header: 'Code', isSortable: true, style: { width: '100px' } },
+    { key: 'hotelChain', header: 'Chain', isSortable: true, style: { width: '120px' } },
+    { key: 'hotelBrand', header: 'Brand', isSortable: true, style: { width: '120px' } },
+    { key: 'hotelName', header: 'Hotel Name', isSortable: true, style: { width: '220px' } },
+    { key: 'hotelStreet', header: 'Street', isSortable: true, style: { width: '200px' } },
+    { key: 'hotelCity', header: 'City', isSortable: true, style: { width: '120px' } },
+    { key: 'hotelState', header: 'State', isSortable: true, style: { width: '100px' } },
+    { key: 'hotelCountry', header: 'Country', isSortable: true, style: { width: '100px' } },
+    { key: 'contactName', header: 'Contact Name', isSortable: true, style: { width: '200px' } },
+    { key: 'contactTitle', header: 'Title', isSortable: true, style: { width: '150px' } },
+    { key: 'hotelWebsiteUrl', header: 'Website', isSortable: false, style: { width: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } },
+    { key: 'hotelStatus', header: 'Status', isSortable: true, style: { width: '100px' } },
+  ];
+  const tableRows = hotels.map(hotel => ({ 
+    ...hotel, 
+    id: hotel.hotelId.toString(),
+    contactName: `${hotel.contactLastName || ''}, ${hotel.contactFirstName || ''}`.trim() || 'N/A'
+  }));
+
   const handlePaginationChange = ({ page, pageSize: newPageSize }) => {
     const newRequestedPage = page - 1;
     if (newPageSize !== pageSize) {
@@ -137,49 +176,52 @@ function HotelList() {
     }
   };
 
-  // Card selection
-  const handleCardClick = (hotelId) => {
-    setSelectedRows(new Set([hotelId.toString()]));
-  };
-  const handleCardCheckboxChange = (hotelId, event) => {
-    event.stopPropagation();
+  const handleRowCheckboxChange = (rowId) => {
     setSelectedRows(prevSelectedRows => {
-      const newSelectedRows = new Set(prevSelectedRows);
-      if (newSelectedRows.has(hotelId.toString())) {
-        newSelectedRows.delete(hotelId.toString());
-      } else {
-        newSelectedRows.add(hotelId.toString());
+      // If the clicked row is already selected, deselect it
+      if (prevSelectedRows.has(rowId)) {
+        return new Set();
       }
-      return newSelectedRows;
+      // Otherwise, select only the clicked row
+      return new Set([rowId]);
     });
   };
-  const isCardSelected = (hotelId) => selectedRows.has(hotelId.toString());
 
-  // Delete logic
+  const isRowSelected = (rowId) => selectedRows.has(rowId);
+
+  // --- Functions for deletion ---
   const openDeleteModal = () => {
     if (selectedRows.size === 1) {
       const selectedId = Array.from(selectedRows)[0];
       setHotelToDeleteId(selectedId);
       setShowDeleteModal(true);
-      setDeleteError(null);
-      setDeleteSuccess(null);
+      setDeleteError(null); // Clear previous error
+      setDeleteSuccess(null); // Clear previous success
     }
   };
+
   const closeDeleteModal = () => {
     setShowDeleteModal(false);
     setHotelToDeleteId(null);
   };
+
   const handleDeleteConfirm = async () => {
     if (!hotelToDeleteId) return;
+
     setLoading(true);
     setDeleteError(null);
     setDeleteSuccess(null);
+
     try {
-      const response = await authenticatedFetch(`/hotels/${hotelToDeleteId}`, { method: 'DELETE' });
+      const response = await authenticatedFetch(`/hotels/${hotelToDeleteId}`, {
+        method: 'DELETE',
+      });
+
       if (!response.ok) {
         const errorBody = await response.text();
         throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not delete property'}. Body: ${errorBody}`);
       }
+
       setDeleteSuccess('Property deleted successfully.');
       closeDeleteModal();
       setSelectedRows(prev => {
@@ -188,102 +230,93 @@ function HotelList() {
         return newSelected;
       });
       fetchHotels();
+
     } catch (err) {
+      console.error('Error deleting hotel:', err);
       setDeleteError(err.message || 'Could not delete property. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
-
-  // Stats
-  const activeHotels = hotels.filter(h => h.hotelStatus === 'A').length;
-  const pendingHotels = hotels.filter(h => h.hotelStatus === 'P').length;
-  const inactiveHotels = hotels.filter(h => h.hotelStatus === 'I').length;
+  // --- End of deletion functions ---
 
   return (
-    <div style={modernContainerStyle}>
-      {/* Header */}
-      <div style={headerStyle}>
-        <h1 style={titleStyle}>SelectVista AI Properties</h1>
-        <p style={subtitleStyle}>
-          Manage and view all properties in the SelectVista AI platform. 
-          Create new properties, view details, and manage amenities.
-        </p>
+    <div style={containerStyle}>
+      <h2 style={{ textAlign: 'center', color: '#3751ff', marginBottom: '10px' }}>SelectVista AI Properties</h2>
+      <p style={{ fontSize: '0.875rem', color: '#555', marginBottom: '20px', textAlign: 'center' }}>
+        Below you will find the list of properties in the SelectVista AI platform.
+        To create a new property select "Create New Property".
+        To view or edit the details of a property, select the corresponding row and click on "View Property Details".
+        To delete a property, select a row and click "Delete Property".
+      </p>
+      <div style={headerButtonContainerStyle}>
+        <div />
+        <Link to="/hotel/new" style={{ textDecoration: 'none' }}>
+          <Button kind="primary" renderIcon={AddFilled}>Create New Property</Button>
+        </Link>
       </div>
-      {/* Stats Cards */}
-      <div style={statsContainerStyle}>
-        <div style={statCardStyle}>
-          <div style={statNumberStyle}>{totalElements}</div>
-          <div style={statLabelStyle}>Total Properties</div>
-        </div>
-        <div style={statCardStyle}>
-          <div style={statNumberStyle}>{activeHotels}</div>
-          <div style={statLabelStyle}>Active</div>
-        </div>
-        <div style={statCardStyle}>
-          <div style={statNumberStyle}>{pendingHotels}</div>
-          <div style={statLabelStyle}>Pending</div>
-        </div>
-        <div style={statCardStyle}>
-          <div style={statNumberStyle}>{inactiveHotels}</div>
-          <div style={statLabelStyle}>Inactive</div>
-        </div>
-      </div>
-      {/* Controls */}
-      <div style={controlsContainerStyle}>
-        <div style={searchContainerStyle}>
-          <Search
-            size="md"
-            labelText="Search properties"
-            placeholder="Search by name, code, city, or country..."
-            value={searchTerm}
-            onChange={handleSearch}
-          />
-        </div>
-        <div style={actionButtonsStyle}>
-          <Link to="/hotel/new" style={{ textDecoration: 'none' }}>
-            <Button kind="primary" renderIcon={AddFilled}>
-              Create New Property
-            </Button>
-          </Link>
+      <div style={tableTitleContainerStyle}>
+        <h3>List of Hotels ({totalElements})</h3>
+        <div>
           <Button
             kind="secondary"
-            renderIcon={Edit}
-            disabled={selectedRows.size !== 1}
-            onClick={() => {
-              if (selectedRows.size === 1) {
-                const selectedHotelId = Array.from(selectedRows)[0];
-                navigate(`/hotel/edit/${selectedHotelId}`, { state: { userRoleInfo } });
-              }
-            }}
+            style={actionButtonStyle}
+            disabled={selectedRows.size === 0} // Enabled if at least one row is selected
           >
-            {userRoleInfo && !userRoleInfo.canEdit ? 'View Details' : 'Edit Property'}
+            View Property Amenities
           </Button>
           <Button
             kind="secondary"
-            renderIcon={View}
+            style={actionButtonStyle}
             disabled={selectedRows.size !== 1}
             onClick={() => {
               if (selectedRows.size === 1) {
                 const selectedHotelId = Array.from(selectedRows)[0];
-                navigate(`/hotels/${selectedHotelId}/rooms`);
+                navigate(`/hotels/${selectedHotelId}/roomsDTO`);
               }
             }}
           >
             View Rooms
           </Button>
           <Button
-            kind="danger"
+            kind="secondary"
+            style={actionButtonStyle}
+            disabled={selectedRows.size !== 1} // Only disable if no selection - anyone can view details
+            onClick={() => {
+              if (selectedRows.size === 1) {
+                const selectedHotelId = Array.from(selectedRows)[0];
+                // Pass user role info as state to the edit form
+                navigate(`/hotel/edit/${selectedHotelId}`, { 
+                  state: { userRoleInfo } 
+                });
+              }
+            }}
+          >
+            {userRoleInfo && !userRoleInfo.canEdit ? 'View Property Details (Read Only)' : 'View Property Details'}
+          </Button>
+          {/* Delete Button */}
+          <Button
+            kind="danger" // 'danger' for destructive actions
             renderIcon={TrashCan}
-            disabled={selectedRows.size !== 1 || (userRoleInfo && !userRoleInfo.canDelete)}
+            style={actionButtonStyle}
+            disabled={selectedRows.size !== 1 || (userRoleInfo && !userRoleInfo.canDelete)} // Disable if no selection or no delete permission
             onClick={openDeleteModal}
           >
             Delete Property
           </Button>
         </div>
       </div>
-      {/* Loading and Error States */}
-      {loading && <Loading description="Loading properties..." withOverlay={false} style={{ marginTop: '2rem' }} />}
+
+      {loading && <Loading description="Loading hotels..." withOverlay={false} style={{ marginTop: '2rem' }} />}
+      {!loading && error && (
+        <InlineNotification
+          kind="error"
+          title="Error Loading List"
+          subtitle={error}
+          onCloseButtonClick={() => setError(null)}
+          lowContrast
+          style={{ marginBottom: '1rem' }}
+        />
+      )}
+      {/* Deletion error notification */}
       {deleteError && (
         <InlineNotification
           kind="error"
@@ -294,6 +327,7 @@ function HotelList() {
           style={{ marginBottom: '1rem' }}
         />
       )}
+      {/* Deletion success notification */}
       {deleteSuccess && (
         <InlineNotification
           kind="success"
@@ -304,132 +338,77 @@ function HotelList() {
           style={{ marginBottom: '1rem' }}
         />
       )}
-      {/* Hotels Grid */}
-      {!loading && (
+
+
+      {!loading && !error && (
         <>
-          {filteredHotels.length === 0 ? (
-            <Tile style={{ textAlign: 'center', padding: '48px', color: '#525252' }}>
-              <Building size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
-              <h3>No properties found</h3>
-              <p>Try adjusting your search criteria or create a new property.</p>
-            </Tile>
+          {hotels.length === 0 ? (
+            <p style={{ textAlign: 'center', marginTop: '2rem' }}>No hotels registered yet.</p>
           ) : (
-            <div style={cardsGridStyle}>
-              {filteredHotels.map((hotel) => (
-                <div
-                  key={hotel.hotelId}
-                  style={isCardSelected(hotel.hotelId) ? selectedCardStyle : hotelCardStyle}
-                  onClick={() => handleCardClick(hotel.hotelId)}
-                >
-                  {/* Card Header */}
-                  <div style={cardHeaderStyle}>
-                    <div>
-                      <div style={hotelNameStyle}>{hotel.hotelName || 'Unnamed Property'}</div>
-                      <div style={hotelCodeStyle}>Code: {hotel.hotelCode || 'N/A'}</div>
-                    </div>
-                    <div style={statusTagStyle}>
-                      <Tag 
-                        type={getStatusKind(hotel.hotelStatus)} 
-                        size="sm"
-                      >
-                        {decodeHotelStatus(hotel.hotelStatus)}
-                      </Tag>
-                    </div>
-                    <Checkbox
-                      id={`checkbox-${hotel.hotelId}`}
-                      labelText=""
-                      onChange={(event) => handleCardCheckboxChange(hotel.hotelId, event)}
-                      checked={isCardSelected(hotel.hotelId)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                  {/* Card Content */}
-                  <div style={cardContentStyle}>
-                    <div style={infoItemStyle}>
-                      <Building size={16} />
-                      <span style={infoLabelStyle}>Chain:</span>
-                      <span style={infoValueStyle}>{hotel.hotelChain || 'N/A'}</span>
-                    </div>
-                    <div style={infoItemStyle}>
-                      <StarFilled size={16} />
-                      <span style={infoLabelStyle}>Brand:</span>
-                      <span style={infoValueStyle}>{hotel.hotelBrand || 'N/A'}</span>
-                    </div>
-                    <div style={infoItemStyle}>
-                      <Location size={16} />
-                      <span style={infoLabelStyle}>City:</span>
-                      <span style={infoValueStyle}>{hotel.hotelCity || 'N/A'}</span>
-                    </div>
-                    <div style={infoItemStyle}>
-                      <Globe size={16} />
-                      <span style={infoLabelStyle}>Country:</span>
-                      <span style={infoValueStyle}>{hotel.hotelCountry || 'N/A'}</span>
-                    </div>
-                    <div style={infoItemStyle}>
-                      <User size={16} />
-                      <span style={infoLabelStyle}>Contact:</span>
-                      <span style={infoValueStyle}>
-                        {`${hotel.contactFirstName || ''} ${hotel.contactLastName || ''}`.trim() || 'N/A'}
-                      </span>
-                    </div>
-                    {hotel.hotelWebsiteUrl && (
-                      <div style={infoItemStyle}>
-                        <Globe size={16} />
-                        <span style={infoLabelStyle}>Website:</span>
-                        <a 
-                          href={hotel.hotelWebsiteUrl.toString().startsWith('http') ? hotel.hotelWebsiteUrl : `http://${hotel.hotelWebsiteUrl}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          style={{ color: '#0f62fe', textDecoration: 'underline' }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Visit
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                  {/* Card Actions */}
-                  <div style={cardActionsStyle}>
-                    <Button
-                      kind="ghost"
-                      size="sm"
-                      renderIcon={Edit}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/hotel/edit/${hotel.hotelId}`, { state: { userRoleInfo } });
-                      }}
-                    >
-                      {userRoleInfo && !userRoleInfo.canEdit ? 'View' : 'Edit'}
-                    </Button>
-                    <Button
-                      kind="ghost"
-                      size="sm"
-                      renderIcon={View}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/hotels/${hotel.hotelId}/rooms`);
-                      }}
-                    >
-                      Rooms
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <DataTable rows={tableRows} headers={dataTableHeaders} isSortable>
+              {({ rows: dtRows, headers: dtHeaders, getHeaderProps, getRowProps, getTableProps }) => (
+                <TableContainer>
+                  <Table {...getTableProps()} size="md" useZebraStyles={false}>
+                    <TableHead>
+                      <TableRow>
+                        {dtHeaders.map((header) => {
+                          const { key, ...restOfHeaderProps } = getHeaderProps({ header });
+                          return (
+                            <TableHeader
+                              key={key}
+                              {...restOfHeaderProps}
+                              onClick={() => {
+                                if (header.isSortable) {
+                                  handleSort(header.key);
+                                }
+                              }}
+                              style={{ ...header.style, ...(restOfHeaderProps.style || {}) }}
+                              isSortable={header.isSortable}
+                            >
+                              {header.header === 'select' ? '' : header.header}
+                              {header.isSortable && header.header !== 'select' && (
+                                <span style={{ marginLeft: '8px' }}>{getSortIcon(header.key)}</span>
+                              )}
+                            </TableHeader>
+                          );
+                        })}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {dtRows.map((row) => (
+                        <TableRow {...getRowProps({ row })} key={row.id} className={isRowSelected(row.id) ? 'cds--data-table--selected' : ''}>
+                          {row.cells.map((cell) => {
+                            if (cell.info.header === 'select') {
+                              return (
+                                <TableCell key={cell.id}>
+                                  <Checkbox id={`checkbox-${row.id}`} labelText="" onChange={() => handleRowCheckboxChange(row.id)} checked={isRowSelected(row.id)} />
+                                </TableCell>
+                              );
+                            }
+                            if (cell.info.header === 'hotelWebsiteUrl') {
+                              return (
+                                <TableCell key={cell.id} style={{ maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {cell.value ? (<a href={cell.value.toString().startsWith('http') ? cell.value.toString() : `http://${cell.value}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0f62fe', textDecoration: 'underline' }}>{cell.value}</a>) : 'N/A'}
+                                </TableCell>
+                              );
+                            }
+                            if (cell.info.header === 'hotelStatus') {
+                              return (<TableCell key={cell.id}>{decodeHotelStatus(cell.value ? cell.value.toString() : '')}</TableCell>);
+                            }
+                            return (<TableCell key={cell.id}>{cell.value !== null && cell.value !== undefined ? cell.value.toString() : 'N/A'}</TableCell>);
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </DataTable>
           )}
-          {/* Pagination */}
-          {totalElements > 0 && filteredHotels.length > 0 && (
-            <Pagination
-              totalItems={totalElements}
-              pageSize={pageSize}
-              pageSizes={[6, 12, 24, 48]}
-              page={currentPage + 1}
-              onChange={handlePaginationChange}
-              style={{ display: 'flex', justifyContent: 'center' }}
-            />
-          )}
+          {totalElements > 0 && hotels.length > 0 && <Pagination totalItems={totalElements} pageSize={pageSize} pageSizes={[10, 25, 50, 100]} page={currentPage + 1} onChange={handlePaginationChange} style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center' }} />}
         </>
       )}
+
       {/* Deletion Confirmation Modal */}
       <Modal
         open={showDeleteModal}
@@ -438,18 +417,19 @@ function HotelList() {
         modalHeading="Confirm Deletion"
         primaryButtonText="YES"
         secondaryButtonText="NO"
-        danger
+        danger // Indicates that the primary action is destructive
       >
         <p>You are about to delete this property. This action is irreversible. Are you sure?</p>
+         {/* Show specific deletion error within the modal if necessary */}
         {deleteError && (
-          <InlineNotification
+            <InlineNotification
             kind="error"
             title="Deletion Failed"
             subtitle={deleteError}
-            hideCloseButton
+            hideCloseButton // Optional: don't allow closing this specific notification
             lowContrast
             style={{ marginTop: '1rem', marginBottom: '0' }}
-          />
+            />
         )}
       </Modal>
     </div>

@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Form, TextInput, NumberInput, Button, InlineNotification, Loading
+  Form, TextInput, NumberInput, Button, InlineNotification, Loading, Dropdown
 } from '@carbon/react';
-import { getApiBaseUrl } from '../services/config';
+import { apiService } from '../services/apiService';
+import { useAuth0 } from '@auth0/auth0-react';
 
 function RoomNewForm() {
   const { hotelId } = useParams();
   const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
   const [formData, setFormData] = useState({
     roomNumber: '',
     roomType: '',
@@ -20,9 +22,30 @@ function RoomNewForm() {
     roomXCoordinates: '',
     roomYCoordinates: '',
   });
+  const [roomTypeOptions, setRoomTypeOptions] = useState([]);
+  const [loadingRoomTypes, setLoadingRoomTypes] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  useEffect(() => {
+    async function fetchRoomTypes() {
+      setLoadingRoomTypes(true);
+      try {
+        const data = await apiService.roomTypes.getAll(0, 100, getAccessTokenSilently);
+        const items = (data.content || data || []).map(type => ({
+          id: type.roomTypeName || type.room_types_name,
+          text: type.roomTypeName || type.room_types_name
+        }));
+        setRoomTypeOptions(items);
+      } catch {
+        setRoomTypeOptions([]);
+      } finally {
+        setLoadingRoomTypes(false);
+      }
+    }
+    fetchRoomTypes();
+  }, [getAccessTokenSilently]);
 
   // Manejar cambios en el formulario
   const handleChange = (e) => {
@@ -37,14 +60,8 @@ function RoomNewForm() {
     setError(null);
     setSuccess(null);
     try {
-      const baseUrl = getApiBaseUrl();
       console.log('Submitting', formData);
-      const response = await fetch(`${baseUrl}/api/rooms/${hotelId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      if (!response.ok) throw new Error('Could not create room');
+      await apiService.roomUnits.create(hotelId, formData, getAccessTokenSilently);
       setSuccess('Room created successfully!');
       setTimeout(() => navigate(-1), 1200);
     } catch (err) {
@@ -61,7 +78,19 @@ function RoomNewForm() {
       {success && <InlineNotification kind="success" title="Success" subtitle={success} style={{ marginBottom: 16 }} />}
       <Form onSubmit={handleSubmit}>
         <TextInput id="roomNumber" name="roomNumber" labelText="Room Number" value={formData.roomNumber} onChange={handleChange} required style={{ marginBottom: 16 }} />
-        <TextInput id="roomType" name="roomType" labelText="Room Type" value={formData.roomType} onChange={handleChange} style={{ marginBottom: 16 }} />
+        <Dropdown
+          id="roomType"
+          titleText="Room Type"
+          label="Select Room Type"
+          items={roomTypeOptions}
+          itemToString={item => (item ? item.text : '')}
+          value={roomTypeOptions.find(opt => opt.id === formData.roomType) || null}
+          selectedItem={roomTypeOptions.find(opt => opt.id === formData.roomType) || null}
+          onChange={({ selectedItem }) => setFormData(prev => ({ ...prev, roomType: selectedItem ? selectedItem.text : '' }))}
+          disabled={loadingRoomTypes}
+          style={{ marginBottom: 16 }}
+          required
+        />
         <NumberInput id="roomFloor" name="roomFloor" label="Floor" value={formData.roomFloor} onChange={(_, { value }) => setFormData(prev => ({ ...prev, roomFloor: value }))} style={{ marginBottom: 16 }} />
         <TextInput id="roomPrice" name="roomPrice" labelText="Price" value={formData.roomPrice} onChange={handleChange} style={{ marginBottom: 16 }} />
         <TextInput id="roomName" name="roomName" labelText="Room Name" value={formData.roomName} onChange={handleChange} style={{ marginBottom: 16 }} />
@@ -72,7 +101,7 @@ function RoomNewForm() {
         <TextInput id="roomYCoordinates" name="roomYCoordinates" labelText="Y Coordinates" value={formData.roomYCoordinates} onChange={handleChange} style={{ marginBottom: 16 }} />
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
           <Button kind="secondary" type="button" onClick={() => navigate(-1)} disabled={saving}>Cancel</Button>
-          <Button kind="primary" type="submit" disabled={saving} loading={saving}>Create</Button>
+          <Button kind="primary" type="submit" disabled={saving}>Create</Button>
         </div>
       </Form>
     </div>

@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Form, TextInput, NumberInput, Button, InlineNotification, Loading, Modal
+  Form, TextInput, NumberInput, Button, InlineNotification, Loading, Modal, Dropdown
 } from '@carbon/react';
-import { getApiBaseUrl } from '../services/config';
+import { apiService } from '../services/apiService';
+import { useAuth0 } from '@auth0/auth0-react';
 
 function RoomEditForm() {
   const { roomId } = useParams();
   const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
   const [formData, setFormData] = useState({
     roomNumber: '',
     roomType: '',
@@ -20,6 +22,8 @@ function RoomEditForm() {
     roomXCoordinates: '',
     roomYCoordinates: '',
   });
+  const [roomTypeOptions, setRoomTypeOptions] = useState([]);
+  const [loadingRoomTypes, setLoadingRoomTypes] = useState(true);
   const [originalData, setOriginalData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,10 +37,7 @@ function RoomEditForm() {
       setLoading(true);
       setError(null);
       try {
-        const baseUrl = getApiBaseUrl();
-        const response = await fetch(`${baseUrl}/api/rooms/${roomId}`);
-        if (!response.ok) throw new Error('Could not fetch room data');
-        const data = await response.json();
+        const data = await apiService.roomUnits.getById(roomId, getAccessTokenSilently);
         setFormData({
           roomNumber: data.roomNumber || '',
           roomType: data.roomType || '',
@@ -57,7 +58,27 @@ function RoomEditForm() {
       }
     }
     fetchRoom();
-  }, [roomId]);
+  }, [roomId, getAccessTokenSilently]);
+
+  // Cargar tipos de habitación
+  useEffect(() => {
+    async function fetchRoomTypes() {
+      setLoadingRoomTypes(true);
+      try {
+        const data = await apiService.roomTypes.getAll(0, 100, getAccessTokenSilently);
+        const items = (data.content || data || []).map(type => ({
+          id: type.roomTypeName || type.room_types_name,
+          text: type.roomTypeName || type.room_types_name
+        }));
+        setRoomTypeOptions(items);
+      } catch {
+        setRoomTypeOptions([]);
+      } finally {
+        setLoadingRoomTypes(false);
+      }
+    }
+    fetchRoomTypes();
+  }, [getAccessTokenSilently]);
 
   // Manejar cambios en el formulario
   const handleChange = (e) => {
@@ -73,13 +94,7 @@ function RoomEditForm() {
     setError(null);
     setSuccess(null);
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/rooms/${roomId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      if (!response.ok) throw new Error('Could not update room');
+      await apiService.roomUnits.update(roomId, formData, getAccessTokenSilently);
       setSuccess('Room updated successfully!');
       setTimeout(() => navigate(-1), 1200);
     } catch (err) {
@@ -100,7 +115,19 @@ function RoomEditForm() {
       {success && <InlineNotification kind="success" title="Success" subtitle={success} style={{ marginBottom: 16 }} />}
       <Form onSubmit={handleSubmit}>
         <TextInput id="roomNumber" name="roomNumber" labelText="Room Number" value={formData.roomNumber} onChange={handleChange} required style={{ marginBottom: 16 }} />
-        <TextInput id="roomType" name="roomType" labelText="Room Type" value={formData.roomType} onChange={handleChange} style={{ marginBottom: 16 }} />
+        <Dropdown
+          id="roomType"
+          titleText="Room Type"
+          label="Select Room Type"
+          items={roomTypeOptions}
+          itemToString={item => (item ? item.text : '')}
+          value={roomTypeOptions.find(opt => opt.id === formData.roomType) || null}
+          selectedItem={roomTypeOptions.find(opt => opt.id === formData.roomType) || null}
+          onChange={({ selectedItem }) => setFormData(prev => ({ ...prev, roomType: selectedItem ? selectedItem.text : '' }))}
+          disabled={loadingRoomTypes}
+          style={{ marginBottom: 16 }}
+          required
+        />
         <NumberInput
           id="roomFloor"
           name="roomFloor"

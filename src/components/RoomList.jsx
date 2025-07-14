@@ -6,7 +6,8 @@ import {
   Modal
 } from '@carbon/react';
 import { AddFilled, ArrowUp, ArrowDown, TrashCan } from '@carbon/icons-react';
-import { getApiBaseUrl } from '../services/config';
+import { apiService } from '../services/apiService';
+import { useAuth0 } from '@auth0/auth0-react';
 
 const containerStyle = { marginTop: '1rem', width: '100%', padding: '20px', backgroundColor: '#f9f9f9' };
 const actionButtonStyle = { marginRight: '0.5rem' };
@@ -16,7 +17,9 @@ const tableTitleContainerStyle = { display: 'flex', justifyContent: 'space-betwe
 function RoomList() {
   const navigate = useNavigate();
   const { hotelId } = useParams();
+  const { getAccessTokenSilently } = useAuth0();
   const [rooms, setRooms] = useState([]);
+  const [hotelName, setHotelName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedRows, setSelectedRows] = useState(new Set());
@@ -51,34 +54,33 @@ function RoomList() {
     setDeleteError(null);
     setDeleteSuccess(null);
     try {
-      const baseUrl = getApiBaseUrl();
-      let url = `${baseUrl}/api/hotels/${hotelId}/rooms?page=${currentPage}&size=${pageSize}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch rooms'}. Body: ${errorBody}`);
-      }
-      const data = await response.json();
-      // Soporta respuesta paginada y array directo
+      const data = await apiService.roomUnits.getByHotelId(hotelId, getAccessTokenSilently);
       if (Array.isArray(data)) {
         setRooms(data);
         setTotalElements(data.length);
         setCurrentPage(0);
         setPageSize(data.length);
+        setHotelName('');
+      } else if (data.rooms) {
+        setRooms(data.rooms);
+        setTotalElements(data.rooms.length);
+        setCurrentPage(0);
+        setPageSize(data.rooms.length);
+        setHotelName(data.hotelName || `ID ${hotelId}`);
       } else {
-        setRooms(data.content || []);
-        setTotalElements(data.totalElements || 0);
-        setCurrentPage(data.number || 0);
-        setPageSize(data.size || 25);
+        setRooms([]);
+        setTotalElements(0);
+        setHotelName('');
       }
     } catch (err) {
       setError(err.message || 'Could not load room list.');
       setRooms([]);
       setTotalElements(0);
+      setHotelName('');
     } finally {
       setLoading(false);
     }
-  }, [hotelId, currentPage, pageSize]);
+  }, [hotelId, getAccessTokenSilently]);
 
   useEffect(() => {
     fetchRooms();
@@ -127,14 +129,7 @@ function RoomList() {
     setDeleteError(null);
     setDeleteSuccess(null);
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/rooms/${roomToDeleteId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not delete room'}. Body: ${errorBody}`);
-      }
+      await apiService.roomUnits.delete(roomToDeleteId, getAccessTokenSilently);
       setDeleteSuccess('Room deleted successfully.');
       closeDeleteModal();
       setSelectedRows(prev => {
@@ -153,7 +148,7 @@ function RoomList() {
 
   return (
     <div style={containerStyle}>
-      <h2 style={{ textAlign: 'center', color: '#3751ff', marginBottom: '10px' }}>Rooms for Hotel {hotelId}</h2>
+      <h2 style={{ textAlign: 'center', color: '#3751ff', marginBottom: '10px' }}>Rooms for Hotel {hotelName}</h2>
       <p style={{ fontSize: '0.875rem', color: '#555', marginBottom: '20px', textAlign: 'center' }}>
         Below you will find the list of rooms for this hotel. To create a new room select "Create New Room". To view or edit the details of a room, select the corresponding row and click on "View/Edit Room". To delete a room, select a row and click "Delete Room".
       </p>
