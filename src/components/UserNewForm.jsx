@@ -27,6 +27,22 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [selectedHotel, setSelectedHotel] = useState(null);
   
+  // Individual field error states
+  const [fieldErrors, setFieldErrors] = useState({
+    username: '',
+    email: '',
+    firstName: '',
+    lastName: '',
+    password: '',
+    roleId: '',
+    chainId: '',
+    brandId: '',
+    hotelId: ''
+  });
+  
+  // State to force validation display
+  const [showValidation, setShowValidation] = useState(false);
+  
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -34,7 +50,7 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
     lastName: '',
     auth0Id: '',
     isActive: true,
-    password: '', // <-- Agregado
+    password: '',
     roleId: null,
     chainId: null,
     brandId: null,
@@ -46,6 +62,185 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
   useEffect(() => {
     loadFormData();
   }, []);
+
+  // Validate form whenever formData changes, but only if showValidation is true
+  useEffect(() => {
+    if (showValidation) {
+      validateForm();
+    }
+  }, [formData, showValidation]);
+
+  // Function to validate a specific field
+  const validateField = (fieldName, value) => {
+    switch (fieldName) {
+      case 'username':
+        if (!value || value.trim() === '') {
+          return 'Username is required';
+        }
+        if (showValidation && value.trim().length < 3) {
+          return 'Username must have at least 3 characters';
+        }
+        if (showValidation && !/^[a-zA-Z0-9_]+$/.test(value.trim())) {
+          return 'Username can only contain letters, numbers, and underscores';
+        }
+        return '';
+      case 'email': {
+        if (!value || value.trim() === '') {
+          return 'Email is required';
+        }
+        if (showValidation) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(value.trim())) {
+            return 'Please enter a valid email address';
+          }
+        }
+        return '';
+      }
+      case 'firstName':
+        if (!value || value.trim() === '') {
+          return 'First name is required';
+        }
+        if (showValidation && value.trim().length < 2) {
+          return 'First name must have at least 2 characters';
+        }
+        return '';
+      case 'lastName':
+        if (!value || value.trim() === '') {
+          return 'Last name is required';
+        }
+        if (showValidation && value.trim().length < 2) {
+          return 'Last name must have at least 2 characters';
+        }
+        return '';
+      case 'password':
+        if (!value || value.trim() === '') {
+          return 'Password is required';
+        }
+        if (showValidation && value.trim().length < 8) {
+          return 'Password must have at least 8 characters';
+        }
+        if (showValidation && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
+          return 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+        }
+        return '';
+      case 'roleId':
+        if (!value) {
+          return 'Role is required';
+        }
+        return '';
+      case 'chainId':
+        // Only validate chainId if role requires it
+        if (formData.roleId) {
+          const role = roles.find(r => r.roleId === formData.roleId);
+          if (role) {
+            const roleName = role.roleName;
+            if (['CHAIN_ADMIN', 'BRAND_ADMIN', 'HOTEL_ADMIN', 'HOTEL_MANAGER', 'HOTEL_STAFF', 'HOTEL_VIEWER'].includes(roleName) && !value) {
+              return 'Chain is required for this role';
+            }
+          }
+        }
+        return '';
+      case 'brandId':
+        // Only validate brandId if role requires it
+        if (formData.roleId) {
+          const role = roles.find(r => r.roleId === formData.roleId);
+          if (role) {
+            const roleName = role.roleName;
+            if (['BRAND_ADMIN', 'HOTEL_ADMIN', 'HOTEL_MANAGER', 'HOTEL_STAFF', 'HOTEL_VIEWER'].includes(roleName) && !value) {
+              return 'Brand is required for this role';
+            }
+          }
+        }
+        return '';
+      case 'hotelId':
+        // Only validate hotelId if role requires it
+        if (formData.roleId) {
+          const role = roles.find(r => r.roleId === formData.roleId);
+          if (role) {
+            const roleName = role.roleName;
+            if (['HOTEL_ADMIN', 'HOTEL_MANAGER', 'HOTEL_STAFF', 'HOTEL_VIEWER'].includes(roleName) && !value) {
+              return 'Hotel is required for this role';
+            }
+          }
+        }
+        return '';
+      default:
+        return '';
+    }
+  };
+
+  // Function to validate the entire form
+  const validateForm = () => {
+    const errors = {
+      username: validateField('username', formData.username),
+      email: validateField('email', formData.email),
+      firstName: validateField('firstName', formData.firstName),
+      lastName: validateField('lastName', formData.lastName),
+      password: validateField('password', formData.password),
+      roleId: validateField('roleId', formData.roleId),
+      chainId: validateField('chainId', formData.chainId),
+      brandId: validateField('brandId', formData.brandId),
+      hotelId: validateField('hotelId', formData.hotelId),
+    };
+    
+    console.log('Validation errors:', errors);
+    
+    setFieldErrors(errors);
+    
+    // Returns true if there are no errors
+    return !Object.values(errors).some(error => error !== '');
+  };
+
+  // Check if the form is valid to enable the save button
+  const isFormValid = () => {
+    const basicFieldsValid = formData.username.trim() !== '' && 
+                            formData.email.trim() !== '' && 
+                            formData.firstName.trim() !== '' && 
+                            formData.lastName.trim() !== '' && 
+                            formData.password.trim() !== '' &&
+                            formData.roleId !== null;
+    
+    if (!basicFieldsValid) {
+      console.log('Basic fields validation failed:', {
+        username: formData.username.trim() !== '',
+        email: formData.email.trim() !== '',
+        firstName: formData.firstName.trim() !== '',
+        lastName: formData.lastName.trim() !== '',
+        password: formData.password.trim() !== '',
+        roleId: formData.roleId !== null
+      });
+      return false;
+    }
+    
+    // Check role-specific requirements
+    if (formData.roleId) {
+      const role = roles.find(r => r.roleId === formData.roleId);
+      if (!role) {
+        console.log('Role not found for roleId:', formData.roleId);
+        return false;
+      }
+      
+      const roleName = role.roleName;
+      console.log('Checking role-specific requirements for:', roleName);
+      
+      if (roleName === 'CHAIN_ADMIN' && !formData.chainId) {
+        console.log('CHAIN_ADMIN requires chainId');
+        return false;
+      }
+      if (roleName === 'BRAND_ADMIN' && (!formData.chainId || !formData.brandId)) {
+        console.log('BRAND_ADMIN requires chainId and brandId');
+        return false;
+      }
+      if (['HOTEL_ADMIN', 'HOTEL_MANAGER', 'HOTEL_STAFF', 'HOTEL_VIEWER'].includes(roleName) && 
+          (!formData.chainId || !formData.brandId || !formData.hotelId)) {
+        console.log('Hotel roles require chainId, brandId, and hotelId');
+        return false;
+      }
+    }
+    
+    console.log('Form is valid');
+    return true;
+  };
 
   const loadFormData = async () => {
     try {
@@ -84,6 +279,17 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
       ...prev,
       [field]: value
     }));
+    
+    setNotification(null); // Clear notifications when changing
+  };
+
+  const handleBlur = (field) => {
+    const value = formData[field];
+    const fieldError = validateField(field, value);
+    setFieldErrors(prev => ({
+      ...prev,
+      [field]: fieldError
+    }));
   };
 
   const handleRoleChange = (event) => {
@@ -98,10 +304,23 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
       hotelId: null
     }));
     
+    // Clear role error if valid selection
+    if (roleId) {
+      setFieldErrors(prev => ({
+        ...prev,
+        roleId: '',
+        chainId: '',
+        brandId: '',
+        hotelId: ''
+      }));
+    }
+    
     // Reset context selections
     setSelectedChain(null);
     setSelectedBrand(null);
     setSelectedHotel(null);
+    
+    setNotification(null);
   };
 
   const handleChainChange = (event) => {
@@ -115,9 +334,21 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
       hotelId: null
     }));
     
+    // Clear chain error if valid selection
+    if (chainId) {
+      setFieldErrors(prev => ({
+        ...prev,
+        chainId: '',
+        brandId: '',
+        hotelId: ''
+      }));
+    }
+    
     // Reset dependent selections
     setSelectedBrand(null);
     setSelectedHotel(null);
+    
+    setNotification(null);
   };
 
   const handleBrandChange = (event) => {
@@ -130,8 +361,19 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
       hotelId: null
     }));
     
+    // Clear brand error if valid selection
+    if (brandId) {
+      setFieldErrors(prev => ({
+        ...prev,
+        brandId: '',
+        hotelId: ''
+      }));
+    }
+    
     // Reset dependent selections
     setSelectedHotel(null);
+    
+    setNotification(null);
   };
 
   const handleHotelChange = (event) => {
@@ -142,6 +384,16 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
       ...prev,
       hotelId: hotelId
     }));
+    
+    // Clear hotel error if valid selection
+    if (hotelId) {
+      setFieldErrors(prev => ({
+        ...prev,
+        hotelId: ''
+      }));
+    }
+    
+    setNotification(null);
   };
 
   const getFilteredBrands = () => {
@@ -176,6 +428,9 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
             labelText="Chain *"
             value={selectedChain?.chainId?.toString() || ''}
             onChange={handleChainChange}
+            onBlur={() => handleBlur('chainId')}
+            invalid={fieldErrors.chainId !== ''}
+            invalidText={fieldErrors.chainId}
           >
             <SelectItem value="" text="Select a chain" />
             {chains.map((chain) => (
@@ -194,6 +449,9 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
             labelText="Chain *"
             value={selectedChain?.chainId?.toString() || ''}
             onChange={handleChainChange}
+            onBlur={() => handleBlur('chainId')}
+            invalid={fieldErrors.chainId !== ''}
+            invalidText={fieldErrors.chainId}
           >
             <SelectItem value="" text="Select a chain" />
             {chains.map((chain) => (
@@ -205,6 +463,9 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
             labelText="Brand *"
             value={selectedBrand?.brandId?.toString() || ''}
             onChange={handleBrandChange}
+            onBlur={() => handleBlur('brandId')}
+            invalid={fieldErrors.brandId !== ''}
+            invalidText={fieldErrors.brandId}
           >
             <SelectItem value="" text="Select a brand" />
             {getFilteredBrands().map((brand) => (
@@ -223,6 +484,9 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
             labelText="Chain *"
             value={selectedChain?.chainId?.toString() || ''}
             onChange={handleChainChange}
+            onBlur={() => handleBlur('chainId')}
+            invalid={fieldErrors.chainId !== ''}
+            invalidText={fieldErrors.chainId}
           >
             <SelectItem value="" text="Select a chain" />
             {chains.map((chain) => (
@@ -234,6 +498,9 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
             labelText="Brand *"
             value={selectedBrand?.brandId?.toString() || ''}
             onChange={handleBrandChange}
+            onBlur={() => handleBlur('brandId')}
+            invalid={fieldErrors.brandId !== ''}
+            invalidText={fieldErrors.brandId}
           >
             <SelectItem value="" text="Select a brand" />
             {getFilteredBrands().map((brand) => (
@@ -245,6 +512,9 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
             labelText="Hotel *"
             value={selectedHotel?.hotelId?.toString() || ''}
             onChange={handleHotelChange}
+            onBlur={() => handleBlur('hotelId')}
+            invalid={fieldErrors.hotelId !== ''}
+            invalidText={fieldErrors.hotelId}
           >
             <SelectItem value="" text="Select a hotel" />
             {getFilteredHotels().map((hotel) => (
@@ -258,36 +528,18 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
     return null;
   };
 
-  const isFormValid = () => {
-    const { username, email, firstName, lastName, roleId } = formData;
-    
-    if (!username || !email || !firstName || !lastName) {
-      return false;
-    }
-    
-    if (roleId) {
-      const role = roles.find(r => r.roleId === roleId);
-      if (!role) return false;
-      
-      const roleName = role.roleName;
-      
-      if (roleName === 'CHAIN_ADMIN' && !formData.chainId) return false;
-      if (roleName === 'BRAND_ADMIN' && (!formData.chainId || !formData.brandId)) return false;
-      if (['HOTEL_ADMIN', 'HOTEL_MANAGER', 'HOTEL_STAFF', 'HOTEL_VIEWER'].includes(roleName) && 
-          (!formData.chainId || !formData.brandId || !formData.hotelId)) return false;
-    }
-    
-    return true;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!isFormValid()) {
+    // Force validation display
+    setShowValidation(true);
+    
+    // Validate the entire form before submitting
+    if (!validateForm()) {
       setNotification({
         kind: 'error',
         title: 'Validation Error',
-        subtitle: 'Please fill in all required fields'
+        subtitle: 'Please fill in all required fields correctly'
       });
       return;
     }
@@ -296,12 +548,28 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
     setNotification(null);
     
     try {
+      // Clean formData to remove empty auth0Id and null values
+      const cleanFormData = {
+        username: formData.username,
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        password: formData.password,
+        isActive: formData.isActive,
+        roleId: formData.roleId,
+        chainId: formData.chainId || null,
+        brandId: formData.brandId || null,
+        hotelId: formData.hotelId || null
+      };
+      
+      console.log('Sending user data:', cleanFormData);
+      
       const response = await authenticatedFetch('/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(cleanFormData)
       });
 
       if (response.ok) {
@@ -317,6 +585,7 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
         }
       } else {
         const errorData = await response.json();
+        console.error('Backend error response:', errorData);
         throw new Error(errorData.message || 'Failed to create user');
       }
     } catch (error) {
@@ -366,14 +635,22 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
                 labelText="First Name *"
                 value={formData.firstName}
                 onChange={(e) => handleInputChange('firstName', e.target.value)}
+                onBlur={() => handleBlur('firstName')}
                 required
+                invalid={fieldErrors.firstName !== ''}
+                invalidText={fieldErrors.firstName}
+                placeholder="Enter first name"
               />
               <TextInput
                 id="lastName"
                 labelText="Last Name *"
                 value={formData.lastName}
                 onChange={(e) => handleInputChange('lastName', e.target.value)}
+                onBlur={() => handleBlur('lastName')}
                 required
+                invalid={fieldErrors.lastName !== ''}
+                invalidText={fieldErrors.lastName}
+                placeholder="Enter last name"
               />
             </div>
             
@@ -382,7 +659,11 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
               labelText="Username *"
               value={formData.username}
               onChange={(e) => handleInputChange('username', e.target.value)}
+              onBlur={() => handleBlur('username')}
               required
+              invalid={fieldErrors.username !== ''}
+              invalidText={fieldErrors.username}
+              placeholder="Enter username"
             />
             
             <TextInput
@@ -391,7 +672,11 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
               type="email"
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
+              onBlur={() => handleBlur('email')}
               required
+              invalid={fieldErrors.email !== ''}
+              invalidText={fieldErrors.email}
+              placeholder="Enter email address"
             />
             
             <TextInput
@@ -400,16 +685,14 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
               type="password"
               value={formData.password}
               onChange={(e) => handleInputChange('password', e.target.value)}
+              onBlur={() => handleBlur('password')}
               required
+              invalid={fieldErrors.password !== ''}
+              invalidText={fieldErrors.password}
+              placeholder="Enter password"
             />
             
-            <TextInput
-              id="auth0Id"
-              labelText="Auth0 ID"
-              value={formData.auth0Id}
-              onChange={(e) => handleInputChange('auth0Id', e.target.value)}
-              placeholder="Optional - will be set during OAuth login"
-            />
+            {/* Auth0 ID removed from UI but kept in formData for API compatibility */}
             
             <Checkbox
               id="isActive"
@@ -425,11 +708,15 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
           <Stack gap={4}>
             <Select
               id="role"
-              labelText="Role"
+              labelText="Role *"
               value={formData.roleId?.toString() || ''}
               onChange={handleRoleChange}
+              onBlur={() => handleBlur('roleId')}
+              invalid={fieldErrors.roleId !== ''}
+              invalidText={fieldErrors.roleId}
+              required
             >
-              <SelectItem value="" text="Select a role (optional)" />
+              <SelectItem value="" text="Select a role" />
               {roles.map((role) => (
                 <SelectItem 
                   key={role.roleId} 

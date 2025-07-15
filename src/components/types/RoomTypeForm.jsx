@@ -55,6 +55,15 @@ function RoomTypeForm() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Individual field error states
+  const [fieldErrors, setFieldErrors] = useState({
+    roomTypeName: '',
+    roomTypeDescription: ''
+  });
+  
+  // State to control when to show validation errors
+  const [showValidation, setShowValidation] = useState(false);
 
   useEffect(() => {
     if (isEditMode) {
@@ -74,6 +83,62 @@ function RoomTypeForm() {
     }
   }, [id, isEditMode, getAccessTokenSilently]);
 
+  // Validate form whenever formData changes, but only if showValidation is true
+  useEffect(() => {
+    if (showValidation) {
+      validateForm();
+    }
+  }, [roomType, showValidation]);
+
+  // Function to validate a specific field
+  const validateField = (fieldName, value) => {
+    switch (fieldName) {
+      case 'roomTypeName':
+        if (!value || value.trim() === '') {
+          return 'Name is required';
+        }
+        if (showValidation && value.trim().length < 2) {
+          return 'Name must have at least 2 characters';
+        }
+        if (showValidation && value.trim().length > 50) {
+          return 'Name must not exceed 50 characters';
+        }
+        return '';
+      case 'roomTypeDescription':
+        if (!value || value.trim() === '') {
+          return 'Description is required';
+        }
+        if (showValidation && value.trim().length < 5) {
+          return 'Description must have at least 5 characters';
+        }
+        if (showValidation && value.trim().length > 200) {
+          return 'Description must not exceed 200 characters';
+        }
+        return '';
+      default:
+        return '';
+    }
+  };
+
+  // Function to validate the entire form
+  const validateForm = () => {
+    const errors = {
+      roomTypeName: validateField('roomTypeName', roomType.roomTypeName),
+      roomTypeDescription: validateField('roomTypeDescription', roomType.roomTypeDescription),
+    };
+    
+    setFieldErrors(errors);
+    
+    // Returns true if there are no errors
+    return !Object.values(errors).some(error => error !== '');
+  };
+
+  // Check if the form is valid to enable the save button
+  const isFormValid = () => {
+    return roomType.roomTypeName.trim() !== '' && 
+           roomType.roomTypeDescription.trim() !== '';
+  };
+
   const handleChange = (e) => {
     const { id, value } = e.target;
     setRoomType(prev => {
@@ -85,8 +150,27 @@ function RoomTypeForm() {
     setSaveSuccess(null);
   };
 
+  const handleBlur = (field) => {
+    const value = roomType[field];
+    const fieldError = validateField(field, value);
+    setFieldErrors(prev => ({
+      ...prev,
+      [field]: fieldError
+    }));
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
+    
+    // Force validation display
+    setShowValidation(true);
+    
+    // Validate the entire form before submitting
+    if (!validateForm()) {
+      setSaveError('Please fill in all required fields correctly');
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(null);
@@ -147,24 +231,28 @@ function RoomTypeForm() {
             <Stack gap={7}>
               <TextInput
                 id="roomTypeName"
-                labelText="Name"
+                labelText="Name *"
                 value={roomType.roomTypeName || ''}
                 onChange={handleChange}
-                invalid={!roomType.roomTypeName}
-                invalidText="Name is required"
+                onBlur={() => handleBlur('roomTypeName')}
+                invalid={fieldErrors.roomTypeName !== ''}
+                invalidText={fieldErrors.roomTypeName}
                 disabled={isSaving}
                 required
+                placeholder="Enter room type name"
               />
 
               <TextInput
                 id="roomTypeDescription"
-                labelText="Description"
+                labelText="Description *"
                 value={roomType.roomTypeDescription || ''}
                 onChange={handleChange}
-                invalid={!roomType.roomTypeDescription}
-                invalidText="Description is required"
+                onBlur={() => handleBlur('roomTypeDescription')}
+                invalid={fieldErrors.roomTypeDescription !== ''}
+                invalidText={fieldErrors.roomTypeDescription}
                 disabled={isSaving}
                 required
+                placeholder="Enter room type description"
               />
 
               {saveError && (
@@ -200,7 +288,7 @@ function RoomTypeForm() {
                 <Button
                   type="submit"
                   renderIcon={Save}
-                  disabled={isSaving || !roomType.roomTypeName || !roomType.roomTypeDescription}
+                  disabled={isSaving || !isFormValid()}
                 >
                   {isSaving ? 'Saving...' : 'Save'}
                 </Button>

@@ -55,6 +55,15 @@ function AmenityTypeForm() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Individual field error states
+  const [fieldErrors, setFieldErrors] = useState({
+    amenityTypeName: '',
+    amenityTypeDescription: ''
+  });
+  
+  // State to control when to show validation errors
+  const [showValidation, setShowValidation] = useState(false);
 
   useEffect(() => {
     if (isEditMode) {
@@ -74,6 +83,62 @@ function AmenityTypeForm() {
     }
   }, [id, isEditMode, getAccessTokenSilently]);
 
+  // Validate form whenever formData changes, but only if showValidation is true
+  useEffect(() => {
+    if (showValidation) {
+      validateForm();
+    }
+  }, [amenityType, showValidation]);
+
+  // Function to validate a specific field
+  const validateField = (fieldName, value) => {
+    switch (fieldName) {
+      case 'amenityTypeName':
+        if (!value || value.trim() === '') {
+          return 'Name is required';
+        }
+        if (showValidation && value.trim().length < 2) {
+          return 'Name must have at least 2 characters';
+        }
+        if (showValidation && value.trim().length > 50) {
+          return 'Name must not exceed 50 characters';
+        }
+        return '';
+      case 'amenityTypeDescription':
+        if (!value || value.trim() === '') {
+          return 'Description is required';
+        }
+        if (showValidation && value.trim().length < 5) {
+          return 'Description must have at least 5 characters';
+        }
+        if (showValidation && value.trim().length > 200) {
+          return 'Description must not exceed 200 characters';
+        }
+        return '';
+      default:
+        return '';
+    }
+  };
+
+  // Function to validate the entire form
+  const validateForm = () => {
+    const errors = {
+      amenityTypeName: validateField('amenityTypeName', amenityType.amenityTypeName),
+      amenityTypeDescription: validateField('amenityTypeDescription', amenityType.amenityTypeDescription),
+    };
+    
+    setFieldErrors(errors);
+    
+    // Returns true if there are no errors
+    return !Object.values(errors).some(error => error !== '');
+  };
+
+  // Check if the form is valid to enable the save button
+  const isFormValid = () => {
+    return amenityType.amenityTypeName.trim() !== '' && 
+           amenityType.amenityTypeDescription.trim() !== '';
+  };
+
   const handleChange = (e) => {
     const { id, value } = e.target;
     setAmenityType(prev => {
@@ -85,8 +150,27 @@ function AmenityTypeForm() {
     setSaveSuccess(null);
   };
 
+  const handleBlur = (field) => {
+    const value = amenityType[field];
+    const fieldError = validateField(field, value);
+    setFieldErrors(prev => ({
+      ...prev,
+      [field]: fieldError
+    }));
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
+    
+    // Force validation display
+    setShowValidation(true);
+    
+    // Validate the entire form before submitting
+    if (!validateForm()) {
+      setSaveError('Please fill in all required fields correctly');
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(null);
@@ -148,24 +232,28 @@ function AmenityTypeForm() {
             <Stack gap={7}>
               <TextInput
                 id="amenityTypeName"
-                labelText="Name"
+                labelText="Name *"
                 value={amenityType.amenityTypeName || ''}
                 onChange={handleChange}
-                invalid={!amenityType.amenityTypeName}
-                invalidText="Name is required"
+                onBlur={() => handleBlur('amenityTypeName')}
+                invalid={fieldErrors.amenityTypeName !== ''}
+                invalidText={fieldErrors.amenityTypeName}
                 disabled={isSaving}
                 required
+                placeholder="Enter amenity type name"
               />
 
               <TextInput
                 id="amenityTypeDescription"
-                labelText="Description"
+                labelText="Description *"
                 value={amenityType.amenityTypeDescription || ''}
                 onChange={handleChange}
-                invalid={!amenityType.amenityTypeDescription}
-                invalidText="Description is required"
+                onBlur={() => handleBlur('amenityTypeDescription')}
+                invalid={fieldErrors.amenityTypeDescription !== ''}
+                invalidText={fieldErrors.amenityTypeDescription}
                 disabled={isSaving}
                 required
+                placeholder="Enter amenity type description"
               />
 
               {saveError && (
@@ -201,7 +289,7 @@ function AmenityTypeForm() {
                 <Button
                   type="submit"
                   renderIcon={Save}
-                  disabled={isSaving || !amenityType.amenityTypeName || !amenityType.amenityTypeDescription}
+                  disabled={isSaving || !isFormValid()}
                 >
                   {isSaving ? 'Saving...' : 'Save'}
                 </Button>

@@ -48,6 +48,14 @@ function AmenityNewForm() {
     amenityDescription: '',
     amenityType: '',
   });
+  
+  // Estados de error individuales para cada campo
+  const [fieldErrors, setFieldErrors] = useState({
+    amenityCode: '',
+    amenityDescription: '',
+    amenityType: '',
+  });
+  
   const [amenityTypes, setAmenityTypes] = useState([]);
   const [loadingTypes, setLoadingTypes] = useState(true);
   // No necesitamos initialAmenity para el formulario de creación
@@ -84,6 +92,49 @@ function AmenityNewForm() {
     fetchAmenityTypes();
   }, [getAccessTokenSilently]);
 
+  // Function to validate a specific field
+  const validateField = (fieldName, value) => {
+    switch (fieldName) {
+      case 'amenityCode':
+        if (!value || value.trim() === '') {
+          return 'Amenity code is required';
+        }
+        if (value.trim().length < 2) {
+          return 'Code must have at least 2 characters';
+        }
+        return '';
+      case 'amenityDescription':
+        if (!value || value.trim() === '') {
+          return 'Description is required';
+        }
+        if (value.trim().length < 5) {
+          return 'Description must have at least 5 characters';
+        }
+        return '';
+      case 'amenityType':
+        if (!value || value.trim() === '') {
+          return 'Amenity type is required';
+        }
+        return '';
+      default:
+        return '';
+    }
+  };
+
+  // Function to validate the entire form
+  const validateForm = () => {
+    const errors = {
+      amenityCode: validateField('amenityCode', amenity.amenityCode),
+      amenityDescription: validateField('amenityDescription', amenity.amenityDescription),
+      amenityType: validateField('amenityType', amenity.amenityType),
+    };
+    
+    setFieldErrors(errors);
+    
+    // Returns true if there are no errors
+    return !Object.values(errors).some(error => error !== '');
+  };
+
   // --- Handle Form Changes ---
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -93,12 +144,29 @@ function AmenityNewForm() {
       setHasChanges(JSON.stringify(newAmenity) !== JSON.stringify(initialFormState));
       return newAmenity;
     });
-    setSaveError(null); // Limpiar errores al cambiar
-    setSaveSuccess(null); // Limpiar éxito al cambiar
+    
+    // Validate the specific field in real time
+    const fieldError = validateField(id, value);
+    setFieldErrors(prev => ({
+      ...prev,
+      [id]: fieldError
+    }));
+    
+    setSaveError(null); // Clear errors when changing
+    setSaveSuccess(null); // Clear success when changing
   };
 
   const handleDropdownChange = ({ selectedItem }) => {
-    setAmenity(prev => ({ ...prev, amenityType: selectedItem ? selectedItem.id : '' }));
+    const selectedValue = selectedItem ? selectedItem.id : '';
+    setAmenity(prev => ({ ...prev, amenityType: selectedValue }));
+    
+    // Validate the type field
+    const fieldError = validateField('amenityType', selectedValue);
+    setFieldErrors(prev => ({
+      ...prev,
+      amenityType: fieldError
+    }));
+    
     setSaveError(null);
     setSaveSuccess(null);
     setHasChanges(true);
@@ -111,9 +179,8 @@ function AmenityNewForm() {
     setSaveError(null);
     setSaveSuccess(null);
 
-    // Validaciones básicas (puedes expandirlas)
-    if (!amenity.amenityCode || !amenity.amenityDescription || !amenity.amenityType) {
-      setSaveError("All fields are required.");
+    // Validate the entire form before submitting
+    if (!validateForm()) {
       setIsSaving(false);
       return;
     }
@@ -121,13 +188,14 @@ function AmenityNewForm() {
     try {
       await apiService.post('/amenities', amenity, getAccessTokenSilently);
       setSaveSuccess('Amenity created successfully!');
-      setAmenity({ amenityCode: '', amenityDescription: '', amenityType: '' }); // Limpiar formulario
-      setHasChanges(false); // Resetear cambios
+      setAmenity({ amenityCode: '', amenityDescription: '', amenityType: '' }); // Clear form
+      setFieldErrors({ amenityCode: '', amenityDescription: '', amenityType: '' }); // Clear errors
+      setHasChanges(false); // Reset changes
 
-      // Opcional: Redirigir después de crear con éxito
+      // Optional: Redirect after successful creation
       setTimeout(() => {
-        navigate('/amenities-list'); // Navegar a la lista de amenities
-      }, 2000); // Esperar 2 segundos para que el usuario vea el mensaje
+        navigate('/amenities-list'); // Navigate to amenities list
+      }, 2000); // Wait 2 seconds for user to see the message
 
     } catch (err) {
       console.error('Error creating amenity:', err);
@@ -155,6 +223,14 @@ function AmenityNewForm() {
     setShowCancelModal(false);
   };
 
+  // Check if the form is valid to enable the save button
+  const isFormValid = () => {
+    return amenity.amenityCode.trim() !== '' && 
+           amenity.amenityDescription.trim() !== '' && 
+           amenity.amenityType.trim() !== '' &&
+           !Object.values(fieldErrors).some(error => error !== '');
+  };
+
   return (
     <div style={containerStyle}>
       <Grid>
@@ -170,27 +246,28 @@ function AmenityNewForm() {
               <TextInput
                 id="amenityCode"
                 name="amenityCode"
-                labelText="Amenity Code"
-                value={amenity.amenityCode} // No necesita '|| ""' porque el estado inicial es ""
+                labelText="Amenity Code *"
+                value={amenity.amenityCode}
                 onChange={handleChange}
                 required
-                // El campo de código SÍ es editable para nuevas amenities
-                invalid={saveError && !amenity.amenityCode} // Marcar como inválido si hay error de guardado y está vacío
-                invalidText="Amenity Code is required."
+                invalid={fieldErrors.amenityCode !== ''}
+                invalidText={fieldErrors.amenityCode}
+                placeholder="Enter amenity code"
               />
               <TextInput
                 id="amenityDescription"
                 name="amenityDescription"
-                labelText="Description"
+                labelText="Description *"
                 value={amenity.amenityDescription}
                 onChange={handleChange}
                 required
-                invalid={saveError && !amenity.amenityDescription}
-                invalidText="Description is required."
+                invalid={fieldErrors.amenityDescription !== ''}
+                invalidText={fieldErrors.amenityDescription}
+                placeholder="Enter amenity description"
               />
               <Dropdown
                 id="amenityType"
-                titleText="Type"
+                titleText="Type *"
                 label="Select Amenity Type"
                 items={amenityTypes}
                 itemToString={item => (item ? item.text : '')}
@@ -198,8 +275,9 @@ function AmenityNewForm() {
                 onChange={handleDropdownChange}
                 required
                 disabled={loadingTypes || isSaving}
-                invalid={saveError && !amenity.amenityType}
-                invalidText="Type is required."
+                invalid={fieldErrors.amenityType !== ''}
+                invalidText={fieldErrors.amenityType}
+                placeholder="Select amenity type"
               />
 
               {saveError && (
@@ -239,7 +317,7 @@ function AmenityNewForm() {
                   type="submit"
                   renderIcon={Save}
                   style={actionButtonStyle}
-                  disabled={isSaving || !hasChanges} // Deshabilitar si no hay cambios o está guardando
+                  disabled={isSaving || !isFormValid()} // Disable if not valid or saving
                 >
                   {isSaving ? 'Creating...' : 'Create Amenity'}
                 </Button>
