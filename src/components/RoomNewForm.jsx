@@ -24,21 +24,6 @@ function RoomNewForm() {
   });
   
   // Individual field error states
-  const [fieldErrors, setFieldErrors] = useState({
-    roomNumber: '',
-    roomType: '',
-    roomFloor: '',
-    roomPrice: '',
-    roomName: '',
-    roomDescription: '',
-    roomBuildingName: '',
-    roomBuildingCode: '',
-    roomXCoordinates: '',
-    roomYCoordinates: '',
-  });
-  
-  
-  // Individual field error states
   const [fieldErrors, setFieldErrors] = useState({});
   
   const [roomTypeOptions, setRoomTypeOptions] = useState([]);
@@ -65,128 +50,6 @@ function RoomNewForm() {
     fetchRoomTypes();
   }, [getAccessTokenSilently]);
 
-  // Function to validate a specific field
-  const validateField = (fieldName, value) => {
-    switch (fieldName) {
-      case 'roomNumber':
-        if (!value || value.trim() === '') {
-          return 'Room number is required';
-        }
-        if (value.trim().length < 1) {
-          return 'Room number must have at least 1 character';
-        }
-        return '';
-      case 'roomType':
-        if (!value || value.trim() === '') {
-          return 'Room type is required';
-        }
-        return '';
-      case 'roomFloor':
-        if (!value || value === '') {
-          return 'Floor is required';
-        }
-        if (isNaN(value) || parseInt(value) < 0) {
-          return 'Floor must be a valid positive number';
-        }
-        return '';
-      case 'roomPrice':
-        if (!value || value.trim() === '') {
-          return 'Price is required';
-        }
-        if (isNaN(value) || parseFloat(value) <= 0) {
-          return 'Price must be a valid positive number';
-        }
-        return '';
-      case 'roomName':
-        if (!value || value.trim() === '') {
-          return 'Room name is required';
-        }
-        if (value.trim().length < 2) {
-          return 'Room name must have at least 2 characters';
-        }
-        return '';
-      case 'roomDescription':
-        if (!value || value.trim() === '') {
-          return 'Description is required';
-        }
-        if (value.trim().length < 5) {
-          return 'Description must have at least 5 characters';
-        }
-        return '';
-      case 'roomBuildingName':
-        if (!value || value.trim() === '') {
-          return 'Building name is required';
-        }
-        if (value.trim().length < 2) {
-          return 'Building name must have at least 2 characters';
-        }
-        return '';
-      case 'roomBuildingCode':
-        if (!value || value.trim() === '') {
-          return 'Building code is required';
-        }
-        if (value.trim().length < 1) {
-          return 'Building code must have at least 1 character';
-        }
-        return '';
-      case 'roomXCoordinates':
-        if (!value || value.trim() === '') {
-          return 'X coordinates are required';
-        }
-        if (isNaN(value)) {
-          return 'X coordinates must be a valid number';
-        }
-        return '';
-      case 'roomYCoordinates':
-        if (!value || value.trim() === '') {
-          return 'Y coordinates are required';
-        }
-        if (isNaN(value)) {
-          return 'Y coordinates must be a valid number';
-        }
-        return '';
-      default:
-        return '';
-    }
-  };
-
-  // Function to validate the entire form
-  const validateForm = () => {
-    const errors = {
-      roomNumber: validateField('roomNumber', formData.roomNumber),
-      roomType: validateField('roomType', formData.roomType),
-      roomFloor: validateField('roomFloor', formData.roomFloor),
-      roomPrice: validateField('roomPrice', formData.roomPrice),
-      roomName: validateField('roomName', formData.roomName),
-      roomDescription: validateField('roomDescription', formData.roomDescription),
-      roomBuildingName: validateField('roomBuildingName', formData.roomBuildingName),
-      roomBuildingCode: validateField('roomBuildingCode', formData.roomBuildingCode),
-      roomXCoordinates: validateField('roomXCoordinates', formData.roomXCoordinates),
-      roomYCoordinates: validateField('roomYCoordinates', formData.roomYCoordinates),
-    };
-    
-    setFieldErrors(errors);
-    
-    // Returns true if there are no errors
-    return !Object.values(errors).some(error => error !== '');
-  };
-
-  // Check if the form is valid to enable the save button
-  const isFormValid = () => {
-    return formData.roomNumber.trim() !== '' && 
-           formData.roomType.trim() !== '' && 
-           formData.roomFloor !== '' &&
-           formData.roomPrice.trim() !== '' &&
-           formData.roomName.trim() !== '' &&
-           formData.roomDescription.trim() !== '' &&
-           formData.roomBuildingName.trim() !== '' &&
-           formData.roomBuildingCode.trim() !== '' &&
-           formData.roomXCoordinates.trim() !== '' &&
-           formData.roomYCoordinates.trim() !== '' &&
-           !Object.values(fieldErrors).some(error => error !== '');
-  };
-
-  // Handle form changes
   // Validate all required fields
   const validateRequiredFields = () => {
     const errors = {};
@@ -294,12 +157,6 @@ function RoomNewForm() {
 
     setSaving(true);
     
-    // Validate the entire form before submitting
-    if (!validateForm()) {
-      setSaving(false);
-      return;
-    }
-    
     try {
       console.log('Submitting', formData);
       await apiService.roomUnits.create(hotelId, formData, getAccessTokenSilently);
@@ -335,18 +192,6 @@ function RoomNewForm() {
           labelText="Room Number *" 
           value={formData.roomNumber} 
           onChange={handleChange} 
-          required 
-          invalid={fieldErrors.roomNumber !== ''}
-          invalidText={fieldErrors.roomNumber}
-          placeholder="Enter room number"
-          style={{ marginBottom: 16 }} 
-        />
-        <TextInput 
-          id="roomNumber" 
-          name="roomNumber" 
-          labelText="Room Number *" 
-          value={formData.roomNumber} 
-          onChange={handleChange} 
           onBlur={() => handleBlur('roomNumber')}
           invalid={!!fieldErrors.roomNumber}
           invalidText={fieldErrors.roomNumber}
@@ -357,116 +202,19 @@ function RoomNewForm() {
         <Dropdown
           id="roomType"
           titleText="Room Type *"
-          titleText="Room Type *"
           label="Select Room Type"
           items={roomTypeOptions}
           itemToString={item => (item ? item.text : '')}
           value={roomTypeOptions.find(opt => opt.id === formData.roomType) || null}
           selectedItem={roomTypeOptions.find(opt => opt.id === formData.roomType) || null}
           onChange={handleDropdownChange}
-          onChange={handleDropdownChange}
           onBlur={() => handleBlur('roomType')}
           disabled={loadingRoomTypes}
-          required
-          invalid={fieldErrors.roomType !== ''}
-          invalidText={fieldErrors.roomType}
-          placeholder="Select room type"
           required
           invalid={!!fieldErrors.roomType}
           invalidText={fieldErrors.roomType}
           placeholder="Select room type"
           style={{ marginBottom: 16 }}
-        />
-        <NumberInput 
-          id="roomFloor" 
-          name="roomFloor" 
-          label="Floor *" 
-          value={formData.roomFloor} 
-          onChange={handleNumberChange('roomFloor')} 
-          required
-          invalid={fieldErrors.roomFloor !== ''}
-          invalidText={fieldErrors.roomFloor}
-          placeholder="Enter floor number"
-          style={{ marginBottom: 16 }} 
-        />
-        <TextInput 
-          id="roomPrice" 
-          name="roomPrice" 
-          labelText="Price *" 
-          value={formData.roomPrice} 
-          onChange={handleChange} 
-          required
-          invalid={fieldErrors.roomPrice !== ''}
-          invalidText={fieldErrors.roomPrice}
-          placeholder="Enter room price"
-          style={{ marginBottom: 16 }} 
-        />
-        <TextInput 
-          id="roomName" 
-          name="roomName" 
-          labelText="Room Name *" 
-          value={formData.roomName} 
-          onChange={handleChange} 
-          required
-          invalid={fieldErrors.roomName !== ''}
-          invalidText={fieldErrors.roomName}
-          placeholder="Enter room name"
-          style={{ marginBottom: 16 }} 
-        />
-        <TextInput 
-          id="roomDescription" 
-          name="roomDescription" 
-          labelText="Description *" 
-          value={formData.roomDescription} 
-          onChange={handleChange} 
-          required
-          invalid={fieldErrors.roomDescription !== ''}
-          invalidText={fieldErrors.roomDescription}
-          placeholder="Enter room description"
-          style={{ marginBottom: 16 }} 
-        />
-        <TextInput 
-          id="roomBuildingName" 
-          name="roomBuildingName" 
-          labelText="Building Name *" 
-          value={formData.roomBuildingName} 
-          onChange={handleChange} 
-          required
-          invalid={fieldErrors.roomBuildingName !== ''}
-          invalidText={fieldErrors.roomBuildingName}
-          placeholder="Enter building name"
-          style={{ marginBottom: 16 }} 
-        />
-        <TextInput 
-          id="roomBuildingCode" 
-          name="roomBuildingCode" 
-          labelText="Building Code *" 
-          value={formData.roomBuildingCode} 
-          onChange={handleChange} 
-          required
-          invalid={fieldErrors.roomBuildingCode !== ''}
-          invalidText={fieldErrors.roomBuildingCode}
-          placeholder="Enter building code"
-          style={{ marginBottom: 16 }} 
-        />
-        <TextInput 
-          id="roomXCoordinates" 
-          name="roomXCoordinates" 
-          labelText="X Coordinates *" 
-          value={formData.roomXCoordinates} 
-          onChange={handleChange} 
-          required
-          invalid={fieldErrors.roomXCoordinates !== ''}
-          invalidText={fieldErrors.roomXCoordinates}
-          placeholder="Enter X coordinates"
-          style={{ marginBottom: 16 }} 
-        />
-        <TextInput 
-          id="roomYCoordinates" 
-          name="roomYCoordinates" 
-          labelText="Y Coordinates *" 
-          value={formData.roomYCoordinates} 
-          onChange={handleChange} 
         />
         <NumberInput 
           id="roomFloor" 
@@ -567,11 +315,6 @@ function RoomNewForm() {
           onChange={handleChange} 
           onBlur={() => handleBlur('roomYCoordinates')}
           required
-          invalid={fieldErrors.roomYCoordinates !== ''}
-          invalidText={fieldErrors.roomYCoordinates}
-          placeholder="Enter Y coordinates"
-          style={{ marginBottom: 16 }} 
-        />
           invalid={!!fieldErrors.roomYCoordinates}
           invalidText={fieldErrors.roomYCoordinates}
           placeholder="Enter Y coordinates"
@@ -579,7 +322,6 @@ function RoomNewForm() {
         />
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
           <Button kind="secondary" type="button" onClick={() => navigate(-1)} disabled={saving}>Cancel</Button>
-          <Button kind="primary" type="submit" disabled={saving || !isFormValid()}>Create</Button>
           <Button kind="primary" type="submit" disabled={saving || !isFormValid()}>Create</Button>
         </div>
       </Form>
