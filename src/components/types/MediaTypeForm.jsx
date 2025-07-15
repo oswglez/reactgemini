@@ -55,6 +55,15 @@ function MediaTypeForm() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Individual field error states
+  const [fieldErrors, setFieldErrors] = useState({
+    mediaTypeName: '',
+    mediaTypeDescription: ''
+  });
+  
+  // State to control when to show validation errors
+  const [showValidation, setShowValidation] = useState(false);
 
   useEffect(() => {
     if (isEditMode) {
@@ -74,6 +83,62 @@ function MediaTypeForm() {
     }
   }, [id, isEditMode, getAccessTokenSilently]);
 
+  // Validate form whenever formData changes, but only if showValidation is true
+  useEffect(() => {
+    if (showValidation) {
+      validateForm();
+    }
+  }, [mediaType, showValidation]);
+
+  // Function to validate a specific field
+  const validateField = (fieldName, value) => {
+    switch (fieldName) {
+      case 'mediaTypeName':
+        if (!value || value.trim() === '') {
+          return 'Name is required';
+        }
+        if (showValidation && value.trim().length < 2) {
+          return 'Name must have at least 2 characters';
+        }
+        if (showValidation && value.trim().length > 50) {
+          return 'Name must not exceed 50 characters';
+        }
+        return '';
+      case 'mediaTypeDescription':
+        if (!value || value.trim() === '') {
+          return 'Description is required';
+        }
+        if (showValidation && value.trim().length < 5) {
+          return 'Description must have at least 5 characters';
+        }
+        if (showValidation && value.trim().length > 200) {
+          return 'Description must not exceed 200 characters';
+        }
+        return '';
+      default:
+        return '';
+    }
+  };
+
+  // Function to validate the entire form
+  const validateForm = () => {
+    const errors = {
+      mediaTypeName: validateField('mediaTypeName', mediaType.mediaTypeName),
+      mediaTypeDescription: validateField('mediaTypeDescription', mediaType.mediaTypeDescription),
+    };
+    
+    setFieldErrors(errors);
+    
+    // Returns true if there are no errors
+    return !Object.values(errors).some(error => error !== '');
+  };
+
+  // Check if the form is valid to enable the save button
+  const isFormValid = () => {
+    return mediaType.mediaTypeName.trim() !== '' && 
+           mediaType.mediaTypeDescription.trim() !== '';
+  };
+
   const handleChange = (e) => {
     const { id, value } = e.target;
     setMediaType(prev => {
@@ -85,8 +150,27 @@ function MediaTypeForm() {
     setSaveSuccess(null);
   };
 
+  const handleBlur = (field) => {
+    const value = mediaType[field];
+    const fieldError = validateField(field, value);
+    setFieldErrors(prev => ({
+      ...prev,
+      [field]: fieldError
+    }));
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
+    
+    // Force validation display
+    setShowValidation(true);
+    
+    // Validate the entire form before submitting
+    if (!validateForm()) {
+      setSaveError('Please fill in all required fields correctly');
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(null);
@@ -148,24 +232,28 @@ function MediaTypeForm() {
             <Stack gap={7}>
               <TextInput
                 id="mediaTypeName"
-                labelText="Name"
+                labelText="Name *"
                 value={mediaType.mediaTypeName || ''}
                 onChange={handleChange}
-                invalid={!mediaType.mediaTypeName}
-                invalidText="Name is required"
+                onBlur={() => handleBlur('mediaTypeName')}
+                invalid={fieldErrors.mediaTypeName !== ''}
+                invalidText={fieldErrors.mediaTypeName}
                 disabled={isSaving}
                 required
+                placeholder="Enter media type name"
               />
 
               <TextInput
                 id="mediaTypeDescription"
-                labelText="Description"
+                labelText="Description *"
                 value={mediaType.mediaTypeDescription || ''}
                 onChange={handleChange}
-                invalid={!mediaType.mediaTypeDescription}
-                invalidText="Description is required"
+                onBlur={() => handleBlur('mediaTypeDescription')}
+                invalid={fieldErrors.mediaTypeDescription !== ''}
+                invalidText={fieldErrors.mediaTypeDescription}
                 disabled={isSaving}
                 required
+                placeholder="Enter media type description"
               />
 
               {saveError && (
@@ -201,7 +289,7 @@ function MediaTypeForm() {
                 <Button
                   type="submit"
                   renderIcon={Save}
-                  disabled={isSaving || !mediaType.mediaTypeName || !mediaType.mediaTypeDescription}
+                  disabled={isSaving || !isFormValid()}
                 >
                   {isSaving ? 'Saving...' : 'Save'}
                 </Button>

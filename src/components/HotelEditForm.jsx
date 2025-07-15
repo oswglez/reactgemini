@@ -109,8 +109,6 @@ function HotelEditForm() {
   const [openCancelModal, setOpenCancelModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
 
-  const [floor, setFloor] = useState(0);
-
   const authenticatedFetch = useAuthenticatedFetch();
 
   useEffect(() => {
@@ -306,7 +304,7 @@ function HotelEditForm() {
           setSelectedHotelStatus(updates.selectedHotelStatus);
           setWebsite(updates.website);
           setDisclaimer(updates.disclaimer);
-          setFloor(updates.floor);
+          // setFloor(updates.floor); // Removed unused floor state
           
           if (updates.streetAddress !== undefined) {
             setStreetAddress(updates.streetAddress);
@@ -442,7 +440,7 @@ function HotelEditForm() {
     setSelectedHotelStatus(statusItem || null);
     setWebsite(data.hotelWebsiteUrl || '');
     setDisclaimer(data.disclaimer || '');
-    setFloor(data.floor !== undefined && data.floor !== null ? data.floor : 0);
+    // setFloor(data.floor !== undefined && data.floor !== null ? data.floor : 0); // Removed unused floor state
   
     let hotelCountryCode = null;
     if (data.mainAddress) {
@@ -531,7 +529,7 @@ function HotelEditForm() {
     if (!isFormDisabled && isFormDirty()) {
       // Debug: muestra diferencias
       console.log('Diferencias detectadas:', {
-        hotelCode, original: originalHotelData.hotelCode,
+ //       hotelCode, original: originalHotelData.hotelCode,
         hotelName, original: originalHotelData.hotelName,
         // ...agrega aquí los campos que quieras comparar
       });
@@ -559,7 +557,9 @@ function HotelEditForm() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     // Add your form submission logic here
+    // Don't forget to set setIsSubmitting(false) when done
   };
 
   if (initialDataLoading) {
