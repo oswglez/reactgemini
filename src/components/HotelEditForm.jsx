@@ -1,4 +1,4 @@
-// src/components/forms/HotelEditForm.jsx
+// src/components/HotelEditForm.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
@@ -13,36 +13,15 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  NumberInput,
 } from '@carbon/react';
 import { getData as getCountryDataList } from 'country-list';
 import {
   AsYouType,
-  getExampleNumber,
   parsePhoneNumberFromString,
   getCountryCallingCode,
 } from 'libphonenumber-js';
-import ReactDOM from 'react-dom';
 import { useAuthenticatedFetch } from '../services/apiService';
-
-
-// --- Estilos (copiados de versiones anteriores, asegúrate que sean los correctos para ti) ---
-const formContainerStyle = {
-  padding: '2rem', maxWidth: '960px', minWidth: '700px', margin: '2rem auto',
-  backgroundColor: '#ffffff', border: '1px solid #e0e0e0', borderRadius: '8px',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-};
-const formRowStyle = { display: 'flex', alignItems: 'flex-start', marginBottom: '1.5rem', gap: '1.5rem' };
-const labelStyle = {
-  flex: '0 0 200px', paddingTop: '0.5rem', textAlign: 'left', fontSize: '0.875rem',
-  color: '#161616', lineHeight: '1.4', wordBreak: 'break-word',
-};
-const inputContainerStyle = { flex: '1 1 auto', minWidth: '250px' };
-const formSectionTitleStyle = {
-  fontSize: '1.375rem', fontWeight: 600, marginTop: '2.5rem', marginBottom: '1.5rem',
-  paddingBottom: '0.75rem', borderBottom: '1px solid #dfe3e6', color: '#161616',
-};
-const buttonContainerStyle = { marginTop: '3rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' };
+import './HotelEditForm.css';
 
 // --- Funciones Helper para Dropdown Placeholders ---
 const createPlaceholderItem = (idSuffix, text) => ({ id: `placeholder-${idSuffix}`, text: `Select a ${text}...` });
@@ -137,7 +116,7 @@ function HotelEditForm() {
     const loadChains = async () => {
       setLoadingChains(true);
       try {
-        const response = await authenticatedFetch(`/chain`);
+        const response = await authenticatedFetch(`/users/available-chains`);
         if (!response.ok) throw new Error('Network response for chains was not ok');
         const data = await response.json();
         const chainItems = [
@@ -166,7 +145,7 @@ function HotelEditForm() {
     setLoadingBrands(true);
     setBrands([createLoadingItem('brands', 'brands')]);
     try {
-      const response = await authenticatedFetch(`/chain/${chainId}/brands`);
+      const response = await authenticatedFetch(`/users/available-brands?chainId=${chainId}`);
       if (!response.ok) throw new Error('Network response for brands was not ok');
       const data = await response.json();
       const brandItemsList = data && data.length > 0 ?
@@ -296,15 +275,13 @@ function HotelEditForm() {
           }
         }
 
-        // Apply all updates at once using a React batch update
-        ReactDOM.unstable_batchedUpdates(() => {
+        // Apply all updates at once
           setOriginalHotelData(updates.originalHotelData);
           setHotelCode(updates.hotelCode);
           setHotelName(updates.hotelName);
           setSelectedHotelStatus(updates.selectedHotelStatus);
           setWebsite(updates.website);
           setDisclaimer(updates.disclaimer);
-          // setFloor(updates.floor); // Removed unused floor state
           
           if (updates.streetAddress !== undefined) {
             setStreetAddress(updates.streetAddress);
@@ -338,7 +315,6 @@ function HotelEditForm() {
           }
           
           setIsHotelFound(true);
-        });
 
       } catch (error) {
         console.error('Error loading hotel data:', error);
@@ -398,14 +374,8 @@ function HotelEditForm() {
   const getPhonePlaceholder = (countryCodeISO) => {
     if (!countryCodeISO) return 'Enter phone number';
     
-    try {
-      const example = getExampleNumber(countryCodeISO, 'NATIONAL');
-      if (example) return example.formatNational();
-    } catch (e) {
-      // Si no se puede obtener un ejemplo, devolver un formato genérico
-      console.warn(`Could not get example for country ${countryCodeISO}:`, e);
-    }
-    return 'Enter phone number (no specific format available)';
+    // Return a generic placeholder since getExampleNumber is not available
+    return 'Enter phone number';
   };
   
   const handlePhoneNumberChange = (rawValue, countryCodeISO, setRawValue, setFormattedValue, setErrorValue) => {
@@ -550,45 +520,205 @@ function HotelEditForm() {
   const handleDeleteAttempt = () => setOpenDeleteModal(true);
   const closeDeleteModal = () => setOpenDeleteModal(false);
 
-  const proceedWithDelete = () => {
-    // Add your delete logic here
+  const proceedWithDelete = async () => {
     setOpenDeleteModal(false);
+    setIsSubmitting(true);
+    setFeedback({ type: '', message: '' });
+
+    try {
+      const response = await authenticatedFetch(`/hotels/${hotelId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Error response:', errorData);
+        throw new Error(`HTTP ${response.status}: ${response.statusText || 'Failed to delete hotel'}. ${errorData}`);
+      }
+
+      console.log('Hotel deleted successfully');
+
+      setFeedback({ 
+        type: 'success', 
+        message: `Hotel "${originalHotelData?.hotelName || `ID ${hotelId}`}" deleted successfully! Redirecting to hotel list...` 
+      });
+
+      // Redirect to hotel list after a short delay
+      setTimeout(() => {
+        navigate('/hotels');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error deleting hotel:', error);
+      setFeedback({ 
+        type: 'error', 
+        message: `Failed to delete hotel: ${error.message}` 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateRequiredFields()) {
+      setFeedback({ type: 'error', message: 'Please fill in all required fields.' });
+      return;
+    }
+
     setIsSubmitting(true);
-    // Add your form submission logic here
-    // Don't forget to set setIsSubmitting(false) when done
+    setFeedback({ type: '', message: '' });
+
+    try {
+      const hotelData = {
+        hotelCode: hotelCode.trim(),
+        hotelName: hotelName.trim(),
+        chainId: parseInt(selectedChain.id),
+        chainName: selectedChain.text,
+        brandId: parseInt(selectedBrand.id),
+        brandName: selectedBrand.text,
+        localPhone: mainPhoneNumberRaw.trim(),
+        hotelWebsiteUrl: website.trim(),
+        disclaimer: disclaimer.trim(),
+        hotelStatus: selectedHotelStatus.id,
+        mainContact: {
+          firstName: contactFirstName.trim(),
+          lastName: contactLastName.trim(),
+          contactTitle: contactTitle.trim(),
+          contactEmail: contactEmail.trim(),
+          contactMobileNumber: contactMobilePhoneRaw.trim(),
+          contactType: 'MAIN'
+        },
+        mainAddress: {
+          country: selectedCountry.code,
+          state: stateProvince.trim(),
+          city: city.trim(),
+          street: streetAddress.trim(),
+          postalCode: zipCode.trim(),
+          addressType: 'MAIN'
+        }
+      };
+
+      console.log('Submitting hotel update data:', hotelData);
+
+      const response = await authenticatedFetch(`/hotels/updateWithDetails/${hotelId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(hotelData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Error response:', errorData);
+        throw new Error(`HTTP ${response.status}: ${response.statusText || 'Failed to update hotel'}. ${errorData}`);
+      }
+
+      const result = await response.json();
+      console.log('Hotel updated successfully:', result);
+
+      setFeedback({ 
+        type: 'success', 
+        message: `Hotel "${hotelName}" updated successfully! Redirecting to hotel list...` 
+      });
+
+      // Redirect to hotel list after a short delay
+      setTimeout(() => {
+        navigate('/hotels');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error updating hotel:', error);
+      setFeedback({ 
+        type: 'error', 
+        message: `Failed to update hotel: ${error.message}` 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const validateRequiredFields = () => {
+    const requiredFields = {
+      selectedChain: 'Chain',
+      selectedBrand: 'Brand',
+      hotelName: 'Hotel Name',
+      selectedHotelStatus: 'Hotel Status',
+      selectedCountry: 'Country',
+      contactFirstName: 'Contact First Name',
+      contactLastName: 'Contact Last Name',
+      contactEmail: 'Contact Email'
+    };
+
+    for (const [field, label] of Object.entries(requiredFields)) {
+      const value = eval(field);
+      if (!value || (typeof value === 'string' && !value.trim())) {
+        setFeedback({ type: 'error', message: `${label} is required.` });
+        return false;
+      }
+    }
+
+    return true;
   };
 
   if (initialDataLoading) {
-    return <Loading description="Loading hotel data..." withOverlay={false} style={{ margin: '2rem' }} />;
+    return (
+      <div className="hotel-edit-form-container">
+        <Loading description="Loading hotel data..." withOverlay={false} className="loading-indicator" />
+      </div>
+    );
   }
 
   if (!isHotelFound) {
     return (
-      <div style={formContainerStyle}>
+      <div className="hotel-edit-form-container">
+        <div className="hotel-edit-form-content">
         <InlineNotification
-          kind="error" title="Hotel Not Found"
+            kind="error" 
+            title="Hotel Not Found"
           subtitle={feedback.message || `Could not find hotel with ID ${hotelId}.`}
-          onCloseButtonClick={() => navigate('/hotel-list')} lowContrast
+            onCloseButtonClick={() => navigate('/hotels')} 
+            lowContrast
         />
-        <Button onClick={() => navigate('/hotel-list')} style={{marginTop: '1rem'}}>Back to Hotel List</Button>
+          <Button onClick={() => navigate('/hotels')} className="nav-button back-button">
+            <span className="nav-icon">←</span>
+            Back to Properties
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={formContainerStyle}>
-      <h1 style={{ marginBottom: '0.5rem', color: '#161616' }}>Edit Hotel Configuration</h1>
-      <p style={{ marginBottom: '2rem', color: '#525252', fontSize: '0.875rem' }}>
-        Modify the hotel configuration below. Fields marked with (<span style={{ color: 'red' }}>*</span>) are required.
-      </p>
+    <div className="hotel-edit-form-container">
+      <div className="hotel-edit-form-content">
+        {/* Header Navigation */}
+        <div className="header-navigation">
+          <Button 
+            kind="tertiary" 
+            onClick={() => navigate("/")}
+            className="nav-button"
+          >
+            <span className="nav-icon">🏠</span>
+            Home
+          </Button>
+          <Button 
+            kind="tertiary" 
+            onClick={() => navigate("/hotels")}
+            className="nav-button back-button"
+          >
+            <span className="nav-icon">←</span>
+            Back to Properties
+          </Button>
+          <h1 className="page-title">Edit Property</h1>
+        </div>
 
-      {isSubmitting && <Loading description="Processing..." withOverlay={false} style={{ marginBottom: '1rem' }} />}
+        {/* Loading and Notifications */}
+        {isSubmitting && <Loading description="Processing..." withOverlay={false} className="loading-indicator" />}
       {feedback.message && (
-        <div style={{ marginBottom: '1rem' }}>
+          <div className="notification-container">
           <InlineNotification
             kind={feedback.type === 'error' ? 'error' : 'success'}
             title={feedback.type === 'error' ? 'Error' : 'Success'}
@@ -599,35 +729,41 @@ function HotelEditForm() {
         </div>
       )}
 
-      <Form onSubmit={handleSubmit}>
         {/* Show read-only warning if user doesn't have edit permissions */}
         {userRoleInfo && !userRoleInfo.canEdit && (
+          <div className="notification-container">
           <InlineNotification
             kind="warning"
             title="Read-Only Mode"
             subtitle="You don't have permission to edit this hotel. All fields are disabled."
             lowContrast
-            style={{ marginBottom: '1rem' }}
           />
+          </div>
         )}
         
+        <Form onSubmit={handleSubmit} className="hotel-form">
         {/* Wrapper to disable only text input fields when user doesn't have edit permissions */}
-        <div style={{
-          opacity: isFormDisabled ? 0.8 : 1,
-          transition: 'opacity 0.2s ease-in-out'
-        }}>
+          <div className={isFormDisabled ? 'read-only-mode' : ''}>
         
-        {/* --- Sección Chain & Brand --- */}
-        <h2 style={formSectionTitleStyle}>Chain & Brand</h2>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="chain-dropdown">Chain <span style={{ color: 'red' }}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+            {/* Chain & Brand Information Card */}
+            <div className="section-card">
+              <div className="section-header">
+                <h2 className="section-title">Chain & Brand Information</h2>
+              </div>
+              <div className="section-content">
+                <div className="form-row two-columns">
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="chain-dropdown">
+                      Chain Name <span className="required-mark">*</span>
+                    </FormLabel>
             <Dropdown
-              id="chain-dropdown" titleText=""
-              label={loadingChains ? "Loading chains..." : (selectedChain?.text || (chains[0]?.id.startsWith('placeholder-') ? chains[0]?.text : "Select a chain..."))}
-              items={chains} itemToString={(item) => (item ? item.text : '')}
+                      id="chain-dropdown"
+                      titleText=""
+                      placeholder={loadingChains ? "Loading..." : "Select a chain..."}
+                      items={chains}
+                      itemToString={(item) => (item ? item.text : '')}
               onChange={({ selectedItem }) => {
-                const newChain = selectedItem.id.startsWith('placeholder-') ? null : selectedItem;
+                        const newChain = selectedItem && !selectedItem.id.startsWith('placeholder-') ? selectedItem : null;
                 if (selectedChain?.id !== newChain?.id) {
                     setSelectedChain(newChain);
                     setSelectedBrand(null); 
@@ -635,62 +771,112 @@ function HotelEditForm() {
                     else setBrands([createSelectChainFirstItem()]);
                 }
               }}
-              selectedItem={selectedChain} disabled={loadingChains || countryDropdownItems[0]?.id.startsWith('loading-') || isFormDisabled} style={{ width: '100%' }}
+                      selectedItem={selectedChain}
+                      disabled={loadingChains || countryDropdownItems[0]?.id.startsWith('loading-') || isFormDisabled}
+                      className="form-dropdown"
             />
           </div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="brand-dropdown">Brand <span style={{ color: 'red' }}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="brand-dropdown">
+                      Brand Name <span className="required-mark">*</span>
+                    </FormLabel>
             <Dropdown
-              id="brand-dropdown" titleText=""
-              label={loadingBrands ? "Loading brands..." : (selectedBrand?.text || (brands[0]?.id.startsWith('placeholder-') || brands[0]?.id.startsWith('select-chain-') ? brands[0]?.text : "Select brand..."))}
-              items={brands} itemToString={(item) => (item ? item.text : '')}
-              onChange={({ selectedItem }) => setSelectedBrand(selectedItem.id.startsWith('placeholder-') || selectedItem.id.startsWith('select-chain-') || selectedItem.id.startsWith('no-items-') ? null : selectedItem)}
-              selectedItem={selectedBrand} disabled={!selectedChain || loadingBrands || brands.length === 0 || brands[0].id.startsWith('select-chain-') || brands[0].id.startsWith('loading-') || isFormDisabled} style={{ width: '100%' }}
+                      id="brand-dropdown"
+                      titleText=""
+                      placeholder={loadingBrands ? "Loading..." : (!selectedChain || selectedChain.id.startsWith('placeholder-') ? "Select chain first" : "Select a brand...")}
+                      items={brands}
+                      itemToString={(item) => (item ? item.text : '')}
+                      onChange={({ selectedItem }) => setSelectedBrand(selectedItem && !selectedItem.id.startsWith('placeholder-') && !selectedItem.id.startsWith('select-chain-') && !selectedItem.id.startsWith('no-items-') ? selectedItem : null)}
+                      selectedItem={selectedBrand}
+                      disabled={!selectedChain || !!selectedChain?.id.startsWith('placeholder-') || loadingBrands || !brands.length || !!brands[0]?.id.startsWith('select-chain-') || !!brands[0]?.id.startsWith('no-items-') || !!brands[0]?.id.startsWith('error-') || !!brands[0]?.id.startsWith('loading-') || isFormDisabled}
+                      className="form-dropdown"
+                    />
+                  </div>
+                </div>
+          </div>
+        </div>
+
+            {/* Property Information Card */}
+            <div className="section-card">
+              <div className="section-header">
+                <h2 className="section-title">Property Information</h2>
+        </div>
+              <div className="section-content">
+                <div className="form-row three-columns">
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="hotel-code">
+                      Hotel Code
+                    </FormLabel>
+                    <TextInput 
+                      id="hotel-code" 
+                      labelText="" 
+                      placeholder="Internal Hotel Code" 
+                      value={hotelCode} 
+                      onChange={(e) => setHotelCode(e.target.value)} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
+                    />
+        </div>
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="hotel-name">
+                      Name <span className="required-mark">*</span>
+                    </FormLabel>
+                    <TextInput 
+                      id="hotel-name" 
+                      labelText="" 
+                      placeholder="Official Property Name" 
+                      value={hotelName} 
+                      onChange={(e) => setHotelName(e.target.value)} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
+                      required 
+                    />
+                  </div>
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="hotel-status-dropdown">
+                      Hotel Status <span className="required-mark">*</span>
+                    </FormLabel>
+            <Dropdown 
+              id="hotel-status-dropdown" 
+              titleText="" 
+                      placeholder="Select hotel status..."
+              items={hotelStatusItems} 
+              itemToString={(item) => (item ? item.text : '')} 
+                      onChange={({ selectedItem }) => setSelectedHotelStatus(selectedItem && !selectedItem.id.startsWith('placeholder-') ? selectedItem : null)} 
+              selectedItem={selectedHotelStatus} 
+              disabled={isFormDisabled}
+                      className="form-dropdown"
             />
           </div>
         </div>
 
-        {/* --- Sección Property Info --- */}
-        <h2 style={formSectionTitleStyle}>Property Info</h2>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="hotel-code">Hotel Code</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="hotel-code" labelText="" placeholder="Internal Hotel Code" value={hotelCode} onChange={(e) => setHotelCode(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }}/></div>
+                <div className="form-row three-columns">
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="street-address">
+                      Street Address
+                    </FormLabel>
+                    <TextInput 
+                      id="street-address" 
+                      labelText="" 
+                      placeholder="e.g., 123 Main St" 
+                      value={streetAddress} 
+                      onChange={(e) => setStreetAddress(e.target.value)} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
+                    />
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="hotel-name">Name <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}><TextInput id="hotel-name" labelText="" placeholder="Official Property Name" value={hotelName} onChange={(e) => setHotelName(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} required /></div>
-        </div>
-         <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="hotel-status-dropdown">Hotel Status <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
-            <Dropdown 
-              id="hotel-status-dropdown" 
-              titleText="" 
-              label={selectedHotelStatus?.text || (hotelStatusItems.find(s => s.id.startsWith('placeholder-'))?.text || "Select hotel status...")}
-              items={hotelStatusItems} 
-              itemToString={(item) => (item ? item.text : '')} 
-              onChange={({ selectedItem }) => setSelectedHotelStatus(selectedItem.id.startsWith('placeholder-') ? null : selectedItem)} 
-              selectedItem={selectedHotelStatus} 
-              style={{ width: '100%' }}
-              disabled={isFormDisabled}
-            />
-          </div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="street-address">Street Address</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="street-address" labelText="" placeholder="e.g., 123 Main St" value={streetAddress} onChange={(e) => setStreetAddress(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} /></div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="country-dropdown">Country <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="country-dropdown">
+                      Country <span className="required-mark">*</span>
+                    </FormLabel>
             <Dropdown
-              id="country-dropdown" titleText=""
-              label={selectedCountry?.text || (countryDropdownItems.find(c=>c.id.startsWith('placeholder-'))?.text || "Select country...")}
-              items={countryDropdownItems} itemToString={(item) => (item ? item.text : '')}
+                      id="country-dropdown"
+                      titleText=""
+                      placeholder="Select country..."
+                      items={countryDropdownItems}
+                      itemToString={(item) => (item ? item.text : '')}
               onChange={({ selectedItem }) => {
-                const newCountry = selectedItem.id.startsWith('placeholder-') ? null : selectedItem;
+                        const newCountry = selectedItem && !selectedItem.id.startsWith('placeholder-') ? selectedItem : null;
                 if (selectedCountry?.code !== newCountry?.code) {
                     setSelectedCountry(newCountry);
                     const newCountryCode = newCountry ? newCountry.code : null;
@@ -701,98 +887,257 @@ function HotelEditForm() {
                     setContactMobilePhoneError('');
                 }
               }}
-              selectedItem={selectedCountry} disabled={countryDropdownItems[0]?.id.startsWith('loading-') || isFormDisabled} style={{ width: '100%' }}
+                      selectedItem={selectedCountry}
+                      disabled={countryDropdownItems[0]?.id.startsWith('loading-') || isFormDisabled}
+                      className="form-dropdown"
             />
           </div>
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="state-province">
+                      State / Province
+                    </FormLabel>
+                    <TextInput 
+                      id="state-province" 
+                      labelText="" 
+                      placeholder="e.g., Florida" 
+                      value={stateProvince} 
+                      onChange={(e) => setStateProvince(e.target.value)} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
+                    />
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="state-province">State / Province</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="state-province" labelText="" placeholder="e.g., Florida" value={stateProvince} onChange={(e) => setStateProvince(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} /></div>
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="city">City</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="city" labelText="" placeholder="e.g., Miami" value={city} onChange={(e) => setCity(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }}/></div>
+
+                <div className="form-row three-columns">
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="city">
+                      City
+                    </FormLabel>
+                    <TextInput 
+                      id="city" 
+                      labelText="" 
+                      placeholder="e.g., Miami" 
+                      value={city} 
+                      onChange={(e) => setCity(e.target.value)} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
+                    />
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="zip-code">Zip Code / Postal Code</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="zip-code" labelText="" placeholder="e.g., 33101" value={zipCode} onChange={(e) => setZipCode(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} /></div>
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="zip-code">
+                      Zip Code / Postal Code
+                    </FormLabel>
+                    <TextInput 
+                      id="zip-code" 
+                      labelText="" 
+                      placeholder="e.g., 33101" 
+                      value={zipCode} 
+                      onChange={(e) => setZipCode(e.target.value)} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
+                    />
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="main-phone-number">Phone Number</FormLabel>
-          <div style={inputContainerStyle}>
-            <TextInput id="main-phone-number" type="tel" 
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="main-phone-number">
+                      Phone Number
+                    </FormLabel>
+                    <TextInput 
+                      id="main-phone-number" 
+                      type="tel" 
               labelText="" 
               placeholder={getPhonePlaceholder(selectedCountry?.code)}
               value={mainPhoneNumberFormatted}
               onChange={(e) => handlePhoneNumberChange(e.target.value, selectedCountry?.code, setMainPhoneNumberRaw, setMainPhoneNumberFormatted, setMainPhoneNumberError)}
               onBlur={() => validatePhoneNumber(mainPhoneNumberRaw, selectedCountry?.code, "Hotel Phone", setMainPhoneNumberError)}
-              invalid={!!mainPhoneNumberError} invalidText={mainPhoneNumberError} disabled={isFormDisabled} style={{ width: '100%' }}
+                      invalid={!!mainPhoneNumberError} 
+                      invalidText={mainPhoneNumberError} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
             />
           </div>
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="website">Website</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="website" type="url" labelText="" placeholder="e.g., https://www.example.com" value={website} onChange={(e) => setWebsite(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} /></div>
+
+                <div className="form-row two-columns">
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="website">
+                      Website
+                    </FormLabel>
+                    <TextInput 
+                      id="website" 
+                      type="url" 
+                      labelText="" 
+                      placeholder="e.g., https://www.example.com" 
+                      value={website} 
+                      onChange={(e) => setWebsite(e.target.value)} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
+                    />
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="disclaimer">Disclaimer</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="disclaimer" labelText="" placeholder="Short disclaimer text" value={disclaimer} onChange={(e) => setDisclaimer(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} /></div>
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="disclaimer">
+                      Disclaimer
+                    </FormLabel>
+                    <TextInput 
+                      id="disclaimer" 
+                      labelText="" 
+                      placeholder="Short disclaimer text" 
+                      value={disclaimer} 
+                      onChange={(e) => setDisclaimer(e.target.value)} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+              </div>
         </div>
 
-        {/* --- Sección Contact Info (Main Contact) --- */}
-        <h2 style={formSectionTitleStyle}>Contact Info (Main Contact)</h2>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-first-name">First Name <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}><TextInput id="contact-first-name" labelText="" placeholder="Contact's first name" value={contactFirstName} onChange={(e) => setContactFirstName(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} required /></div>
+            {/* Contact Information Card */}
+            <div className="section-card">
+              <div className="section-header">
+                <h2 className="section-title">Contact Information</h2>
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-last-name">Last Name <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}><TextInput id="contact-last-name" labelText="" placeholder="Contact's last name" value={contactLastName} onChange={(e) => setContactLastName(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} required /></div>
+              <div className="section-content">
+                <div className="form-row three-columns">
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="contact-first-name">
+                      First Name <span className="required-mark">*</span>
+                    </FormLabel>
+                    <TextInput 
+                      id="contact-first-name" 
+                      labelText="" 
+                      placeholder="Contact's first name" 
+                      value={contactFirstName} 
+                      onChange={(e) => setContactFirstName(e.target.value)} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
+                      required 
+                    />
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-title">Title</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="contact-title" labelText="" placeholder="e.g., General Manager" value={contactTitle} onChange={(e) => setContactTitle(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} /></div>
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="contact-last-name">
+                      Last Name <span className="required-mark">*</span>
+                    </FormLabel>
+                    <TextInput 
+                      id="contact-last-name" 
+                      labelText="" 
+                      placeholder="Contact's last name" 
+                      value={contactLastName} 
+                      onChange={(e) => setContactLastName(e.target.value)} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
+                      required 
+                    />
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-mobile-phone">Phone Number</FormLabel>
-          <div style={inputContainerStyle}>
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="contact-title">
+                      Title
+                    </FormLabel>
             <TextInput
-              id="contact-mobile-phone" type="tel" labelText=""
+                      id="contact-title" 
+                      labelText="" 
+                      placeholder="e.g., General Manager" 
+                      value={contactTitle} 
+                      onChange={(e) => setContactTitle(e.target.value)} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row two-columns">
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="contact-mobile-phone">
+                      Phone Number
+                    </FormLabel>
+                    <TextInput
+                      id="contact-mobile-phone" 
+                      type="tel" 
+                      labelText=""
               placeholder={getPhonePlaceholder(selectedCountry?.code)}
               value={contactMobilePhoneFormatted}
               onChange={(e) => handlePhoneNumberChange(e.target.value, selectedCountry?.code, setContactMobilePhoneRaw, setContactMobilePhoneFormatted, setContactMobilePhoneError)}
               onBlur={() => validatePhoneNumber(contactMobilePhoneRaw, selectedCountry?.code, "Contact Phone", setContactMobilePhoneError)}
-              invalid={!!contactMobilePhoneError} invalidText={contactMobilePhoneError} disabled={isFormDisabled} style={{ width: '100%' }}
+                      invalid={!!contactMobilePhoneError} 
+                      invalidText={contactMobilePhoneError} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
             />
           </div>
+                  <div className="form-field">
+                    <FormLabel className="field-label" htmlFor="contact-email">
+                      Email <span className="required-mark">*</span>
+                    </FormLabel>
+                    <TextInput 
+                      id="contact-email" 
+                      type="email" 
+                      labelText="" 
+                      placeholder="e.g., contact@example.com" 
+                      value={contactEmail} 
+                      onChange={(e) => setContactEmail(e.target.value)} 
+                      disabled={isFormDisabled} 
+                      className="form-input"
+                      required 
+                    />
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-email">Email <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}><TextInput id="contact-email" type="email" labelText="" placeholder="e.g., contact@example.com" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} disabled={isFormDisabled} style={{ width: '100%' }} required /></div>
+                </div>
+              </div>
         </div>
         
-        <div style={buttonContainerStyle}>
-          <Button kind="secondary" type="button" onClick={handleCancelAttempt} disabled={isSubmitting}>Cancel</Button>
+            {/* Form Actions */}
+            <div className="form-actions">
+              <div>
           {userRoleInfo && userRoleInfo.canDelete && (
-            <Button kind="danger--tertiary" type="button" onClick={handleDeleteAttempt} disabled={isSubmitting} style={{marginRight: 'auto'}}>Delete Hotel</Button>
-          )}
+                  <Button 
+                    kind="danger--tertiary" 
+                    type="button" 
+                    onClick={handleDeleteAttempt} 
+                    disabled={isSubmitting}
+                    className="delete-button"
+                  >
+                    Delete Hotel
+                  </Button>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <Button 
+                  kind="secondary" 
+                  type="button" 
+                  onClick={handleCancelAttempt} 
+                  disabled={isSubmitting}
+                  className="cancel-button"
+                >
+                  Cancel
+                </Button>
           {userRoleInfo && userRoleInfo.canEdit ? (
-            <Button type="submit" kind="primary" disabled={isSubmitting || loadingChains || loadingBrands || initialDataLoading}>
+                  <Button 
+                    type="submit" 
+                    kind="primary" 
+                    disabled={isSubmitting || loadingChains || loadingBrands || initialDataLoading}
+                    className="submit-button"
+                  >
               {isSubmitting ? 'Saving...' : 'Save Changes'}
             </Button>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#525252', fontSize: '0.875rem' }}>
+                  <div className="read-only-message">
               <span>Read-only mode - You don't have permission to edit this hotel</span>
             </div>
           )}
+              </div>
         </div>
         </div> {/* Close wrapper div */}
       </Form>
 
+        {/* Modals */}
       <ComposedModal open={openCancelModal} onClose={closeModal} preventCloseOnClickOutside={false} size="sm">
         <ModalHeader title="Discard Changes?" closeModal={closeModal} />
-        <ModalBody><p style={{ marginBottom: '1rem' }}>Any unsaved changes will be lost and you will be navigated away.</p><p>Are you sure you want to cancel?</p></ModalBody>
-        <ModalFooter><Button kind="secondary" onClick={closeModal}>No</Button><Button kind="primary" onClick={proceedWithCancel}>Yes, Cancel</Button></ModalFooter>
+          <ModalBody>
+            <p style={{ marginBottom: '1rem' }}>Any unsaved changes will be lost and you will be navigated away.</p>
+            <p>Are you sure you want to cancel?</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button kind="secondary" onClick={closeModal}>No</Button>
+            <Button kind="primary" onClick={proceedWithCancel}>Yes, Cancel</Button>
+          </ModalFooter>
       </ComposedModal>
 
       <ComposedModal open={openDeleteModal} onClose={closeDeleteModal} danger preventCloseOnClickOutside={false} size="sm">
@@ -803,8 +1148,12 @@ function HotelEditForm() {
           </p>
           <p>This will mark the hotel as inactive and it may not be recoverable.</p>
         </ModalBody>
-        <ModalFooter><Button kind="secondary" onClick={closeDeleteModal}>Cancel</Button><Button kind="danger" onClick={proceedWithDelete}>Delete Hotel</Button></ModalFooter>
+          <ModalFooter>
+            <Button kind="secondary" onClick={closeDeleteModal}>Cancel</Button>
+            <Button kind="danger" onClick={proceedWithDelete}>Delete Hotel</Button>
+          </ModalFooter>
       </ComposedModal>
+      </div>
     </div>
   );
 }

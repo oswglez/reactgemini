@@ -38,6 +38,35 @@ import RoomNewForm from './components/RoomNewForm';
 import UserList from './components/UserList';
 import UserEditForm from './components/UserEditForm';
 
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <h2>Something went wrong.</h2>
+          <p>Please refresh the page or contact support.</p>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 // Componentes 404
 const NotFound = () => (
   <div style={{ marginTop: '2rem' }}>
@@ -69,18 +98,24 @@ function App() {
 
   return (
     <ProtectedApp>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "1rem" }}>
-        <UserProfile />
-        <LogoutButton />
-      </div>
+      <ErrorBoundary>
       <Routes>
-        {/* Layout Principal - AppLayout */}
-        <Route path="/" element={<AppLayout />}>
-          {/* Ruta Raíz: Dashboard */}
-          <Route index element={<Dashboard />} />
+        {/* Main Dashboard Route - No Sidebar Layout */}
+        <Route path="/" element={<Dashboard />} />
 
+        {/* Hotel List Route - Direct access without sidebar */}
+        <Route path="/hotels" element={<HotelList />} />
+
+        {/* Hotel New Form Route - Direct access without sidebar */}
+        <Route path="/hotel/new" element={<HotelNewForm />} />
+
+        {/* Hotel Edit Form Route - Direct access without sidebar */}
+        <Route path="/hotel/edit/:hotelId" element={<HotelEditForm />} />
+
+        {/* Other routes with AppLayout for sidebar navigation */}
+        <Route path="/admin" element={<AppLayout />}>
           {/* Redirección de /types a /types-management */}
-          <Route path="types" element={<Navigate to="/types-management" replace />} />
+          <Route path="types" element={<Navigate to="/admin/types-management" replace />} />
 
           {/* Gestión de Tipos - Movido arriba para priorizar el matching */}
           <Route path="types-management" element={<TypesManagementPage />} />
@@ -122,20 +157,22 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Route>
           {/* Rutas de Creación y Edición de Rooms */}
-          <Route path="/hotels/:hotelId/roomsDTO" element={<RoomList />} />
-          <Route path="/rooms/edit/:roomId" element={<RoomEditForm />} />
-          <Route path="/hotels/:hotelId/rooms/new" element={<RoomNewForm />} />
+          <Route path="hotels/:hotelId/roomsDTO" element={<RoomList />} />
+          <Route path="rooms/edit/:roomId" element={<RoomEditForm />} />
+          <Route path="hotels/:hotelId/rooms/new" element={<RoomNewForm />} />
 
           {/* Listado de Usuarios */}
           <Route path="users" element={<UserList />} />
-          <Route path="/users/new" element={<UserEditForm />} />
-          <Route path="/users/edit/:id" element={<UserEditForm />} />
+          <Route path="users/new" element={<UserEditForm />} />
+          <Route path="users/edit/:id" element={<UserEditForm />} />
 
           {/* Ruta 404 para cualquier otra URL no capturada */}
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
-      <EnvironmentIndicator />
+      </ErrorBoundary>
+      {/* EnvironmentIndicator - Oculto pero disponible para activar más tarde */}
+      {/* <EnvironmentIndicator /> */}
       {isAuthenticated && (
         <div>
           <button onClick={callApiWithToken}>Call Protected API</button>

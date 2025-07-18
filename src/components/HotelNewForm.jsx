@@ -23,59 +23,12 @@ import {
 } from 'libphonenumber-js';
 import { useAuthenticatedFetch } from '../services/apiService';
 
-// --- Styles (unchanged) ---
-const formContainerStyle = {
-  padding: '2rem',
-  maxWidth: '960px',
-  minWidth: '700px',
-  margin: '2rem auto',
-  backgroundColor: '#ffffff',
-  border: '1px solid #e0e0e0',
-  borderRadius: '8px',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-};
-const formRowStyle = {
-  display: 'flex',
-  alignItems: 'flex-start',
-  marginBottom: '1.5rem',
-  gap: '1.5rem',
-};
-const labelStyle = {
-  flex: '0 0 200px',
-  paddingTop: '0.5rem',
-  textAlign: 'left',
-  fontSize: '0.875rem',
-  color: '#161616',
-  lineHeight: '1.4',
-  wordBreak: 'break-word',
-};
-const inputContainerStyle = {
-  flex: '1 1 auto',
-  minWidth: '250px',
-};
-const formSectionTitleStyle = {
-  fontSize: '1.375rem',
-  fontWeight: 600,
-  marginTop: '2.5rem',
-  marginBottom: '1.5rem',
-  paddingBottom: '0.75rem',
-  borderBottom: '1px solid #dfe3e6',
-  color: '#161616',
-};
-const buttonContainerStyle = {
-  marginTop: '3rem',
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: '1rem',
-};
-
 // --- Helper functions for Dropdown Placeholders (unchanged) ---
 const createPlaceholderItem = (idSuffix, text) => ({ id: `placeholder-${idSuffix}`, text: `Select a ${text}...` });
 const createLoadingItem = (idSuffix, text) => ({ id: `loading-${idSuffix}`, text: `Loading ${text}...` });
 const createErrorItem = (idSuffix, text) => ({ id: `error-${idSuffix}`, text: `Error loading ${text}` });
 const createSelectChainFirstItem = () => ({ id: `select-chain-brand`, text: 'Select chain first...' });
 const createNoItemsItem = (idSuffix, text) => ({ id: `no-items-${idSuffix}`, text: `No ${text} available` });
-
 
 function HotelNewForm() {
   const navigate = useNavigate();
@@ -145,13 +98,21 @@ function HotelNewForm() {
   const fetchChainsData = useCallback(async () => {
     setLoadingChains(true);
     try {
-      const response = await authenticatedFetch(`/chain`);
-      if (!response.ok) throw new Error('Network response for chains was not ok');
+      const response = await authenticatedFetch(`/users/available-chains`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Network response for chains was not ok: ${response.status} - ${errorText}`);
+      }
+      
       const data = await response.json();
-      setChains([
+      
+      const formattedChains = [
         createPlaceholderItem('chain', 'chain'),
         ...data.map(c => ({ id: c.chainId.toString(), text: c.chainName }))
-      ]);
+      ];
+      
+      setChains(formattedChains);
     } catch (error) {
       console.error("Error fetching chains:", error);
       setChains([createErrorItem('chains', 'chains')]);
@@ -171,11 +132,15 @@ function HotelNewForm() {
         setLoadingBrands(true);
         setBrands([createLoadingItem('brands', 'brands')]);
         try {
-          const response = await authenticatedFetch(`/chain/${selectedChain.id}/brands`);
+          const response = await authenticatedFetch(`/users/available-brands`);
           if (!response.ok) throw new Error('Network response for brands was not ok');
           const data = await response.json();
-          setBrands(data && data.length > 0 ?
-            [createPlaceholderItem('brand', 'brand'), ...data.map(b => ({ id: b.brandId.toString(), text: b.brandName }))]
+          
+          // Filter brands by selected chain
+          const filteredBrands = data.filter(brand => brand.chainId.toString() === selectedChain.id);
+          
+          setBrands(filteredBrands && filteredBrands.length > 0 ?
+            [createPlaceholderItem('brand', 'brand'), ...filteredBrands.map(b => ({ id: b.brandId.toString(), text: b.brandName }))]
             : [createNoItemsItem('brands', 'brands for this chain')]
           );
         } catch (error) {
@@ -198,228 +163,191 @@ function HotelNewForm() {
     setRawValue(rawValue); // Always update the raw value
 
     if (countryCodeISO) {
-      const formatter = new AsYouType(countryCodeISO);
-      // Format the entire raw value each time to handle pastes and deletes correctly
-      for (const char of rawValue) {
-        if (/\d/.test(char) || char === '+') {
-          formatter.input(char);
-        } else {
-          // For other characters (like spaces, parentheses the user might type)
-          // AsYouType handles them internally, but if we want stricter control
-          // we could filter them here or just let AsYouType do its job.
-          // For now, we trust AsYouType. If the user types invalid chars,
-          // formatting may stop or behave oddly.
-          // Final validation in onBlur/submit will catch it.
+      try {
+        const asYouType = new AsYouType(countryCodeISO);
+        const formattedValue = asYouType.input(rawValue);
+        setFormattedValue(formattedValue);
+        
+        // Clear error if user is typing
+        if (setErrorValue) {
+          setErrorValue('');
         }
+      } catch (error) {
+        console.warn('Error formatting phone number:', error);
+        setFormattedValue(rawValue);
       }
-      // If rawValue is empty after the loop (e.g., only had invalid chars),
-      // AsYouType's `formatted` may not be empty if it had formatted something before.
-      // So, better to format the whole rawValue.
-      const finalFormatter = new AsYouType(countryCodeISO);
-      setFormattedValue(finalFormatter.input(rawValue));
-
-      setErrorValue(''); // Clear error while typing
     } else {
-      setFormattedValue(rawValue); // No country, show raw as formatted
-      if (rawValue) { // Only show error if something is typed and no country
-        setErrorValue('Please select a country first to format/validate phone number.');
-      } else {
-        setErrorValue('');
-      }
+      setFormattedValue(rawValue);
     }
   };
 
   const validatePhoneNumber = (numberRaw, countryCodeISO, fieldName, setErrorFunc) => {
-    if (!numberRaw || numberRaw.trim() === '') { // If the field is empty
-      setErrorFunc(''); // No number, no error (unless explicitly required)
-      return null; // Return null so it is not sent
+    if (!numberRaw || !countryCodeISO) {
+      setErrorFunc('');
+      return;
     }
-    if (!countryCodeISO) {
-      setErrorFunc(`${fieldName}: Select a country to validate phone.`);
-      return null; 
-    }
+
     try {
       const phoneNumber = parsePhoneNumberFromString(numberRaw, countryCodeISO);
       if (phoneNumber && phoneNumber.isValid()) {
         setErrorFunc('');
-        return phoneNumber.format('E.164');
       } else {
-        setErrorFunc(`${fieldName}: Invalid phone number for selected country.`);
-        return null;
+        setErrorFunc(`${fieldName} is not a valid phone number for the selected country.`);
       }
     } catch (error) {
-      console.error(`Phone validation error for ${fieldName}:`, error);
-      setErrorFunc(`${fieldName}: Error validating phone number.`);
-      return null;
+      console.warn('Error validating phone number:', error);
+      setErrorFunc(`${fieldName} validation failed. Please check the format.`);
     }
   };
 
   const getPhonePlaceholder = (countryCodeISO) => {
-    if (countryCodeISO) {
+    if (!countryCodeISO) return 'Enter phone number...';
+    
       try {
-        const example = getExampleNumber(countryCodeISO, 'NATIONAL');
-        if (example) return example.formatNational();
-      } catch (e) { /* Do nothing if no example */ }
+      const exampleNumber = getExampleNumber(countryCodeISO);
+      if (exampleNumber) {
+        return exampleNumber.formatNational();
+      }
+    } catch {
+      console.warn('Could not get example number for country:', countryCodeISO);
     }
-    return 'Enter phone number';
+    
+    return 'Enter phone number...';
   };
 
-  const resetFormFields = useCallback(() => {
-    setSelectedChain(null);
-    setHotelCode('');
-    setHotelName('');
-    setStreetAddress('');
-    setSelectedCountry(null); // This will also clear phone placeholders
-    setStateProvince('');
-    setCity('');
-    setZipCode('');
-    setMainPhoneNumberRaw('');
-    setMainPhoneNumberFormatted('');
-    setMainPhoneNumberError('');
-    setWebsite('');
-    setDisclaimer('');
-    setContactFirstName('');
-    setContactLastName('');
-    setContactTitle('');
-    setContactMobilePhoneRaw('');
-    setContactMobilePhoneFormatted('');
-    setContactMobilePhoneError('');
-    setContactEmail('');
-    fetchChainsData();
-  }, [fetchChainsData]);
-
-  // Validate all required fields before submitting the form
   const validateRequiredFields = () => {
     const errors = {};
 
-    if (!hotelName.trim()) errors.hotelName = "Hotel name is required.";
-    if (hotelName.length > 250) errors.hotelName = "Hotel name cannot exceed 250 characters.";
-    if (!selectedChain || !selectedChain.id || selectedChain.id.startsWith('placeholder-')) errors.selectedChain = "Chain is required.";
-    if (!selectedBrand || !selectedBrand.id || selectedBrand.id.startsWith('placeholder-')) errors.selectedBrand = "Brand is required.";
-    if (!streetAddress.trim()) errors.streetAddress = "Street address is required.";
-    if (streetAddress.length > 250) errors.streetAddress = "Street address cannot exceed 250 characters.";
-    if (!selectedCountry || !selectedCountry.id || selectedCountry.id.startsWith('placeholder-')) errors.selectedCountry = "Country is required.";
-    if (!stateProvince.trim()) errors.stateProvince = "State/Province is required.";
-    if (stateProvince.length > 250) errors.stateProvince = "State/Province cannot exceed 250 characters.";
-    if (!city.trim()) errors.city = "City is required.";
-    if (city.length > 250) errors.city = "City cannot exceed 250 characters.";
-    if (!zipCode.trim()) errors.zipCode = "ZIP/Postal code is required.";
-    if (zipCode.length > 250) errors.zipCode = "ZIP/Postal code cannot exceed 250 characters.";
-    if (!mainPhoneNumberRaw.trim()) errors.mainPhoneNumberRaw = "Main phone number is required.";
-    if (mainPhoneNumberRaw.length > 250) errors.mainPhoneNumberRaw = "Main phone number cannot exceed 250 characters.";
-    if (!website.trim()) errors.website = "Website is required.";
-    if (website.length > 250) errors.website = "Website cannot exceed 250 characters.";
-    if (!contactFirstName.trim()) errors.contactFirstName = "Contact first name is required.";
-    if (contactFirstName.length > 250) errors.contactFirstName = "Contact first name cannot exceed 250 characters.";
-    if (!contactLastName.trim()) errors.contactLastName = "Contact last name is required.";
-    if (contactLastName.length > 250) errors.contactLastName = "Contact last name cannot exceed 250 characters.";
-    if (!contactTitle.trim()) errors.contactTitle = "Contact title is required.";
-    if (contactTitle.length > 250) errors.contactTitle = "Contact title cannot exceed 250 characters.";
-    if (!contactMobilePhoneRaw.trim()) errors.contactMobilePhoneRaw = "Contact mobile phone is required.";
-    if (contactMobilePhoneRaw.length > 250) errors.contactMobilePhoneRaw = "Contact mobile phone cannot exceed 250 characters.";
-    if (!contactEmail.trim()) errors.contactEmail = "Contact email is required.";
-    if (contactEmail.length > 250) errors.contactEmail = "Contact email cannot exceed 250 characters.";
-
-    return errors;
+    if (!selectedChain || selectedChain.id.startsWith('placeholder-')) {
+      errors.selectedChain = 'Chain is required';
+    }
+    if (!selectedBrand || selectedBrand.id.startsWith('placeholder-') || selectedBrand.id.startsWith('select-chain-') || selectedBrand.id.startsWith('no-items-')) {
+      errors.selectedBrand = 'Brand is required';
+    }
+    if (!hotelName.trim()) {
+      errors.hotelName = 'Hotel name is required';
+    }
+    if (!streetAddress.trim()) {
+      errors.streetAddress = 'Street address is required';
+    }
+    if (!selectedCountry || selectedCountry.id.startsWith('placeholder-')) {
+      errors.selectedCountry = 'Country is required';
+    }
+    if (!stateProvince.trim()) {
+      errors.stateProvince = 'State/Province is required';
+    }
+    if (!city.trim()) {
+      errors.city = 'City is required';
+    }
+    if (!zipCode.trim()) {
+      errors.zipCode = 'Zip/Postal code is required';
+    }
+    if (!mainPhoneNumberRaw.trim()) {
+      errors.mainPhoneNumberRaw = 'Phone number is required';
+    }
+    if (!website.trim()) {
+      errors.website = 'Website is required';
+    }
+    if (!contactFirstName.trim()) {
+      errors.contactFirstName = 'Contact first name is required';
+    }
+    if (!contactLastName.trim()) {
+      errors.contactLastName = 'Contact last name is required';
+    }
+    if (!contactMobilePhoneRaw.trim()) {
+      errors.contactMobilePhoneRaw = 'Contact phone number is required';
+    }
+    if (!contactEmail.trim()) {
+      errors.contactEmail = 'Contact email is required';
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleBlur = (field) => {
-    const errors = validateRequiredFields();
-    setFieldErrors(prev => ({ ...prev, [field]: errors[field] }));
+    // Clear field-specific error when user starts typing again
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({ ...prev, [field]: undefined }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setFeedback({ type: '', message: '' });
-
-    const currentCountryCode = selectedCountry ? selectedCountry.code : null;
-
-    // Force final validation before submitting
-    const finalValidatedMainPhone = validatePhoneNumber(mainPhoneNumberRaw, currentCountryCode, "Hotel Phone", setMainPhoneNumberError);
-    const finalValidatedContactPhone = validatePhoneNumber(contactMobilePhoneRaw, currentCountryCode, "Contact Phone", setContactMobilePhoneError);
-
-    // Check if phone validations produced errors
-    let phoneValidationFailed = false;
-    if (mainPhoneNumberRaw && !finalValidatedMainPhone) {
-        setMainPhoneNumberError("Hotel Phone: Invalid phone number for selected country."); // Re-ensure error message
-        phoneValidationFailed = true;
-    }
-    if (contactMobilePhoneRaw && !finalValidatedContactPhone) {
-        setContactMobilePhoneError("Contact Phone: Invalid phone number for selected country."); // Re-ensure error message
-        phoneValidationFailed = true;
-    }
-
-    const errors = validateRequiredFields();
-    if (Object.keys(errors).length > 0) {
-      // Only show the first error (top-down)
-      const firstErrorKey = Object.keys(errors)[0];
-      setFieldErrors(errors);
-      setFeedback({ type: 'error', message: errors[firstErrorKey] });
-      // Focus and scroll to the first error field
-      setTimeout(() => {
-        const el = document.getElementById(firstErrorKey);
-        if (el) el.focus();
-        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 0);
-      return;
-    }
     
-    if (phoneValidationFailed) {
-        setFeedback({ type: 'error', message: 'Please correct the invalid phone numbers before submitting.' });
-        setIsSubmitting(false); // Ensure isSubmitting is reset
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!validateRequiredFields()) {
+      setFeedback({ type: 'error', message: 'Please fill in all required fields.' });
         return;
     }
     
     setIsSubmitting(true);
-
-    const formData = {
-      hotelCode: hotelCode || null,
-      hotelName,
-      hotelStatus: 'P',
-      brandId: parseInt(selectedBrand.id, 10),
-      localPhone: finalValidatedMainPhone, // Use the validated and formatted number in E.164
-      disclaimer: disclaimer || null,
-      hotelWebsiteUrl: website || null,
-      mainContact: {
-        firstName: contactFirstName,
-        lastName: contactLastName,
-        contactTitle: contactTitle || null,
-        contactEmail,
-        contactMobileNumber: finalValidatedContactPhone, // Use the validated and formatted number in E.164
-        contactType: 'MAIN',
-      },
-      mainAddress: {
-        country: currentCountryCode,
-        state: stateProvince || null,
-        city: city || null,
-        street: streetAddress || null,
-        postalCode: zipCode || null,
-        addressType: 'MAIN',
-      },
-    };
-    
-    console.log('Submitting Form Data to Backend:', JSON.stringify(formData, null, 2));
+    setFeedback({ type: '', message: '' });
 
     try {
+      const hotelData = {
+        hotelCode: hotelCode.trim(),
+        hotelName: hotelName.trim(),
+        chainId: parseInt(selectedChain.id),
+        chainName: selectedChain.text,
+        brandId: parseInt(selectedBrand.id),
+        brandName: selectedBrand.text,
+        localPhone: mainPhoneNumberRaw.trim(),
+        hotelWebsiteUrl: website.trim(),
+        disclaimer: disclaimer.trim(),
+        hotelStatus: 'A', // Active status
+      mainContact: {
+          firstName: contactFirstName.trim(),
+          lastName: contactLastName.trim(),
+          contactTitle: contactTitle.trim(),
+          contactEmail: contactEmail.trim(),
+          contactMobileNumber: contactMobilePhoneRaw.trim(),
+          contactType: 'MAIN'
+      },
+      mainAddress: {
+          country: selectedCountry.code,
+          state: stateProvince.trim(),
+          city: city.trim(),
+          street: streetAddress.trim(),
+          postalCode: zipCode.trim(),
+          addressType: 'MAIN'
+        }
+    };
+    
+      console.log('Submitting hotel data:', hotelData);
+
       const response = await authenticatedFetch('/hotels/createFull', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(hotelData),
       });
       
       if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`API Error ${response.status}: ${errorBody || response.statusText}`);
+        const errorData = await response.text();
+        console.error('Error response:', errorData);
+        throw new Error(`HTTP ${response.status}: ${response.statusText || 'Failed to create hotel'}. ${errorData}`);
       }
+
       const result = await response.json();
-      setFeedback({ type: 'success', message: `Hotel "${result.hotelName || formData.hotelName}" created successfully! (ID: ${result.hotelId || 'N/A'})` });
-      resetFormFields();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      setTimeout(() => navigate(-1), 2500);
+      console.log('Hotel created successfully:', result);
+
+      setFeedback({ 
+        type: 'success', 
+        message: `Hotel "${hotelName}" created successfully! Redirecting to hotel list...` 
+      });
+
+      // Redirect to hotel list after a short delay
+      setTimeout(() => {
+        navigate('/hotels');
+      }, 2000);
+
     } catch (error) {
-      console.error('Error submitting hotel creation form:', error);
-      setFeedback({ type: 'error', message: `Error creating hotel: ${error.message}` });
+      console.error('Error creating hotel:', error);
+      setFeedback({ 
+        type: 'error', 
+        message: `Failed to create hotel: ${error.message}` 
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -427,23 +355,39 @@ function HotelNewForm() {
 
   const handleCancelAttempt = () => setOpenCancelModal(true);
   const proceedWithCancel = () => {
-    resetFormFields();
-    setFeedback({ type: '', message: '' });
     setOpenCancelModal(false);
-    navigate(-1);
+    navigate('/hotels');
   };
   const closeModal = () => setOpenCancelModal(false);
 
   return (
-    <div style={formContainerStyle}>
-      <h1 style={{ marginBottom: '0.5rem', color: '#161616' }}>Hotel Configuration</h1>
-      <p style={{ marginBottom: '2rem', color: '#525252', fontSize: '0.875rem' }}>
-        Complete the hotel configuration... Fields marked with (<span style={{ color: 'red' }}>*</span>) are required.
-      </p>
+    <div className="hotel-new-form-container">
+      <div className="hotel-new-form-content">
+        {/* Header Navigation */}
+        <div className="header-navigation">
+          <Button 
+            kind="tertiary" 
+            onClick={() => navigate("/")}
+            className="nav-button"
+          >
+            <span className="nav-icon">🏠</span>
+            Home
+          </Button>
+          <Button 
+            kind="tertiary" 
+            onClick={() => navigate("/hotels")}
+            className="nav-button back-button"
+          >
+            <span className="nav-icon">←</span>
+            Back to Properties
+          </Button>
+          <h1 className="page-title">Add New Property</h1>
+        </div>
 
-      {isSubmitting && <Loading description="Submitting form..." withOverlay={false} style={{ marginBottom: '1rem' }} />}
+        {/* Loading and Notifications */}
+        {isSubmitting && <Loading description="Submitting form..." withOverlay={false} className="loading-indicator" />}
       {feedback.message && (
-        <div style={{ marginBottom: '1rem' }}>
+          <div className="notification-container">
           <InlineNotification
             kind={feedback.type === 'error' ? 'error' : 'success'}
             title={feedback.type === 'error' ? 'Submission Error' : 'Success'}
@@ -454,18 +398,24 @@ function HotelNewForm() {
         </div>
       )}
       {loadingChains && !isSubmitting &&
-        <Loading description="Loading initial data..." withOverlay={false} style={{ marginBottom: '1rem' }} />}
+          <Loading description="Loading initial data..." withOverlay={false} className="loading-indicator" />}
 
-      <Form onSubmit={handleSubmit}>
-        {/* --- Chain & Brand Section (unchanged from last version) --- */}
-        <h2 style={formSectionTitleStyle}>Chain & Brand</h2>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="chain-dropdown">Chain <span style={{ color: 'red' }}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+        <Form onSubmit={handleSubmit} className="hotel-form">
+          {/* Chain & Brand Information Card */}
+          <div className="section-card">
+            <div className="section-header">
+              <h2 className="section-title">Chain & Brand Information</h2>
+            </div>
+            <div className="section-content">
+              <div className="form-row two-columns">
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="chain-dropdown">
+                    Chain Name <span className="required-mark">*</span>
+                  </FormLabel>
             <Dropdown
               id="selectedChain"
               titleText=""
-              label={loadingChains ? "Loading..." : (chains[0]?.text || "Select a chain...")}
+                    placeholder={loadingChains ? "Loading..." : "Select a chain..."}
               items={chains}
               itemToString={(item) => (item ? item.text : '')}
               onChange={({ selectedItem }) => {
@@ -479,18 +429,18 @@ function HotelNewForm() {
               selectedItem={selectedChain}
               invalid={!!fieldErrors.selectedChain}
               invalidText={fieldErrors.selectedChain}
-              style={{ width: '100%' }}
+                    className="form-dropdown"
               disabled={loadingChains}
             />
           </div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="brand-dropdown">Brand <span style={{ color: 'red' }}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="brand-dropdown">
+                    Brand Name <span className="required-mark">*</span>
+                  </FormLabel>
             <Dropdown
               id="selectedBrand"
               titleText=""
-              label={loadingBrands ? "Loading..." : (!selectedChain || selectedChain.id.startsWith('placeholder-') ? "Select chain first" : (brands[0]?.text || "Select a brand..."))}
+                    placeholder={loadingBrands ? "Loading..." : (!selectedChain || selectedChain.id.startsWith('placeholder-') ? "Select chain first" : "Select a brand...")}
               items={brands}
               itemToString={(item) => (item ? item.text : '')}
               onChange={({ selectedItem }) => {
@@ -504,65 +454,35 @@ function HotelNewForm() {
               selectedItem={selectedBrand}
               invalid={!!fieldErrors.selectedBrand}
               invalidText={fieldErrors.selectedBrand}
-              style={{ width: '100%' }}
+                    className="form-dropdown"
               disabled={!selectedChain || !!selectedChain?.id.startsWith('placeholder-') || loadingBrands || !brands.length || !!brands[0]?.id.startsWith('select-chain-') || !!brands[0]?.id.startsWith('no-items-') || !!brands[0]?.id.startsWith('error-') || !!brands[0]?.id.startsWith('loading-')}
             />
           </div>
         </div>
+        </div>
+          </div>
 
-        {/* --- Property Info Section --- */}
-        <h2 style={formSectionTitleStyle}>Property Info</h2>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="hotel-code">Hotel Code</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="hotel-code" labelText="" placeholder="Internal Hotel Code" value={hotelCode} onChange={(e) => setHotelCode(e.target.value)} style={{ width: '100%' }}/></div>
+          {/* Property Information Card */}
+          <div className="section-card">
+            <div className="section-header">
+              <h2 className="section-title">Property Information</h2>
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="hotel-name">Name <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
-            <TextInput
-              id="hotelName"
-              labelText=""
-              placeholder="Official Property Name"
-              value={hotelName}
-              onChange={(e) => setHotelName(e.target.value)}
-              onBlur={() => handleBlur('hotelName')}
-              invalid={!!fieldErrors.hotelName}
-              invalidText={fieldErrors.hotelName}
-              maxLength={250}
-              style={{ width: '100%' }}
-            />
-          </div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="street-address">Street Address <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
-            <TextInput 
-              id="streetAddress"
-              labelText="" 
-              placeholder="e.g., 123 Main St" 
-              value={streetAddress} 
-              onChange={(e) => setStreetAddress(e.target.value)}
-              onBlur={() => handleBlur('streetAddress')}
-              invalid={!!fieldErrors.streetAddress}
-              invalidText={fieldErrors.streetAddress}
-              maxLength={250}
-              style={{ width: '100%' }} 
-            />
-          </div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="country-dropdown">Country <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+            <div className="section-content">
+              {/* Country & Property Name - 2 columns */}
+              <div className="form-row two-columns">
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="country-dropdown">
+                    Country <span className="required-mark">*</span>
+                  </FormLabel>
             <Dropdown
               id="selectedCountry"
               titleText=""
-              label={selectedCountry ? selectedCountry.text : (countryDropdownItems[0]?.text || "Select a country...")}
-              items={countryDropdownItems} // Use the loaded country list
+                    placeholder="Select a country..."
+                    items={countryDropdownItems}
               itemToString={(item) => (item ? item.text : '')}
               onChange={({ selectedItem }) => {
                 const newCountry = selectedItem.id.startsWith('placeholder-') ? null : selectedItem;
                 setSelectedCountry(newCountry);
-                const newCountryCode = newCountry ? newCountry.code : null;
                 // Clear/reformat phone numbers when changing country
                 setMainPhoneNumberRaw(''); setMainPhoneNumberFormatted(''); setMainPhoneNumberError('');
                 setContactMobilePhoneRaw(''); setContactMobilePhoneFormatted(''); setContactMobilePhoneError('');
@@ -570,80 +490,121 @@ function HotelNewForm() {
                 if (fieldErrors.selectedCountry) {
                   setFieldErrors(prev => ({ ...prev, selectedCountry: undefined }));
                 }
-                // Update placeholders
-                if (newCountryCode) {
-                    // This doesn't work directly, TextInput placeholders don't update this way.
-                    // The placeholder is passed in the TextInput prop `placeholder`.
-                }
               }}
               onBlur={() => handleBlur('selectedCountry')}
               selectedItem={selectedCountry}
               invalid={!!fieldErrors.selectedCountry}
               invalidText={fieldErrors.selectedCountry}
-              style={{ width: '100%' }}
+                    className="form-dropdown"
+                  />
+                </div>
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="hotel-name">
+                    Property Name <span className="required-mark">*</span>
+                  </FormLabel>
+                  <TextInput
+                    id="hotelName"
+                    labelText=""
+                    placeholder="Enter property name"
+                    value={hotelName}
+                    onChange={(e) => setHotelName(e.target.value)}
+                    onBlur={() => handleBlur('hotelName')}
+                    invalid={!!fieldErrors.hotelName}
+                    invalidText={fieldErrors.hotelName}
+                    maxLength={250}
+                    className="form-input"
             />
           </div>
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="state-province">State / Province <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+
+              {/* Street Address - Full width */}
+              <div className="form-row full-width">
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="street-address">
+                    Street Address <span className="required-mark">*</span>
+                  </FormLabel>
             <TextInput 
-              id="stateProvince"
+                    id="streetAddress"
               labelText="" 
-              placeholder="e.g., California" 
-              value={stateProvince} 
-              onChange={(e) => setStateProvince(e.target.value)}
-              onBlur={() => handleBlur('stateProvince')}
-              invalid={!!fieldErrors.stateProvince}
-              invalidText={fieldErrors.stateProvince}
+                    placeholder="Enter street address" 
+                    value={streetAddress} 
+                    onChange={(e) => setStreetAddress(e.target.value)}
+                    onBlur={() => handleBlur('streetAddress')}
+                    invalid={!!fieldErrors.streetAddress}
+                    invalidText={fieldErrors.streetAddress}
               maxLength={250}
-              style={{ width: '100%' }} 
+                    className="form-input"
             />
           </div>
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="city">City <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+
+              {/* City, State, Zipcode - 3 columns */}
+              <div className="form-row three-columns">
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="city">
+                    City Name <span className="required-mark">*</span>
+                  </FormLabel>
             <TextInput 
               id="city"
               labelText="" 
-              placeholder="e.g., New York" 
+                    placeholder="Enter city name" 
               value={city} 
               onChange={(e) => setCity(e.target.value)}
               onBlur={() => handleBlur('city')}
               invalid={!!fieldErrors.city}
               invalidText={fieldErrors.city}
               maxLength={250}
-              style={{ width: '100%' }}
+                    className="form-input"
             />
           </div>
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="state-province">
+                    State Name <span className="required-mark">*</span>
+                  </FormLabel>
+                  <TextInput 
+                    id="stateProvince"
+                    labelText="" 
+                    placeholder="Enter state name" 
+                    value={stateProvince} 
+                    onChange={(e) => setStateProvince(e.target.value)}
+                    onBlur={() => handleBlur('stateProvince')}
+                    invalid={!!fieldErrors.stateProvince}
+                    invalidText={fieldErrors.stateProvince}
+                    maxLength={250}
+                    className="form-input"
+                  />
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="zip-code">Zip Code / Postal Code <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="zip-code">
+                    Zipcode / Postal Code <span className="required-mark">*</span>
+                  </FormLabel>
             <TextInput 
               id="zipCode"
               labelText="" 
-              placeholder="e.g., 10001" 
+                    placeholder="Enter zipcode" 
               value={zipCode} 
               onChange={(e) => setZipCode(e.target.value)}
               onBlur={() => handleBlur('zipCode')}
               invalid={!!fieldErrors.zipCode}
               invalidText={fieldErrors.zipCode}
               maxLength={250}
-              style={{ width: '100%' }} 
+                    className="form-input"
             />
           </div>
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="main-phone-number">Phone Number <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+
+              {/* Phone Number & Fax Number - 2 columns */}
+              <div className="form-row two-columns">
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="main-phone-number">
+                    Phone Number <span className="required-mark">*</span>
+                  </FormLabel>
             <TextInput
               id="mainPhoneNumberRaw"
               type="tel"
               labelText=""
               placeholder={getPhonePlaceholder(selectedCountry?.code)}
-              value={mainPhoneNumberFormatted} // Always show formatted value
+                    value={mainPhoneNumberFormatted}
               onChange={(e) => handlePhoneNumberChange(e, selectedCountry?.code, setMainPhoneNumberRaw, setMainPhoneNumberFormatted, setMainPhoneNumberError)}
               onBlur={() => {
                 validatePhoneNumber(mainPhoneNumberRaw, selectedCountry?.code, "Hotel Phone", setMainPhoneNumberError);
@@ -652,72 +613,106 @@ function HotelNewForm() {
               invalid={!!mainPhoneNumberError || !!fieldErrors.mainPhoneNumberRaw}
               invalidText={mainPhoneNumberError || fieldErrors.mainPhoneNumberRaw}
               maxLength={250}
-              style={{ width: '100%' }}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="hotel-code">Hotel Code</FormLabel>
+                  <TextInput 
+                    id="hotel-code" 
+                    labelText="" 
+                    placeholder="Internal Hotel Code" 
+                    value={hotelCode} 
+                    onChange={(e) => setHotelCode(e.target.value)} 
+                    className="form-input"
             />
           </div>
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="website">Website <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+
+              {/* Property Website - Full width */}
+              <div className="form-row full-width">
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="website">
+                    Property Website <span className="required-mark">*</span>
+                  </FormLabel>
             <TextInput 
               id="website"
               type="url" 
               labelText="" 
-              placeholder="e.g., https://www.example.com" 
+                    placeholder="Enter property website URL" 
               value={website} 
               onChange={(e) => setWebsite(e.target.value)}
               onBlur={() => handleBlur('website')}
               invalid={!!fieldErrors.website}
               invalidText={fieldErrors.website}
               maxLength={250}
-              style={{ width: '100%' }} 
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              {/* Disclaimer - Full width */}
+              <div className="form-row full-width">
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="disclaimer">Disclaimer</FormLabel>
+                  <TextInput 
+                    id="disclaimer" 
+                    labelText="" 
+                    placeholder="Short disclaimer text" 
+                    value={disclaimer} 
+                    onChange={(e) => setDisclaimer(e.target.value)} 
+                    className="form-input"
             />
           </div>
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="disclaimer">Disclaimer</FormLabel>
-          <div style={inputContainerStyle}><TextInput id="disclaimer" labelText="" placeholder="Short disclaimer text" value={disclaimer} onChange={(e) => setDisclaimer(e.target.value)} style={{ width: '100%' }} /></div>
+            </div>
         </div>
 
-        {/* --- Contact Info (Main Contact) Section --- */}
-        <h2 style={formSectionTitleStyle}>Contact Info (Main Contact)</h2>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-first-name">First Name <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+          {/* Contact Information Card */}
+          <div className="section-card">
+            <div className="section-header">
+              <h2 className="section-title">Contact Information</h2>
+            </div>
+            <div className="section-content">
+              <div className="form-row two-columns">
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="contact-first-name">
+                    First Name <span className="required-mark">*</span>
+                  </FormLabel>
             <TextInput
               id="contactFirstName"
               labelText=""
-              placeholder="Contact's first name"
+                    placeholder="Enter first name"
               value={contactFirstName}
               onChange={(e) => setContactFirstName(e.target.value)}
               onBlur={() => handleBlur('contactFirstName')}
               invalid={!!fieldErrors.contactFirstName}
               invalidText={fieldErrors.contactFirstName}
               maxLength={250}
-              style={{ width: '100%' }}
+                    className="form-input"
             />
           </div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-last-name">Last Name <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="contact-last-name">
+                    Last Name <span className="required-mark">*</span>
+                  </FormLabel>
             <TextInput
               id="contactLastName"
               labelText=""
-              placeholder="Contact's last name"
+                    placeholder="Enter last name"
               value={contactLastName}
               onChange={(e) => setContactLastName(e.target.value)}
               onBlur={() => handleBlur('contactLastName')}
               invalid={!!fieldErrors.contactLastName}
               invalidText={fieldErrors.contactLastName}
               maxLength={250}
-              style={{ width: '100%' }}
+                    className="form-input"
             />
           </div>
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-title">Title</FormLabel>
-          <div style={inputContainerStyle}>
+              <div className="form-row full-width">
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="contact-title">Title</FormLabel>
             <TextInput
               id="contactTitle"
               labelText=""
@@ -728,19 +723,21 @@ function HotelNewForm() {
               invalid={!!fieldErrors.contactTitle}
               invalidText={fieldErrors.contactTitle}
               maxLength={250}
-              style={{ width: '100%' }}
+                    className="form-input"
             />
           </div>
         </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-mobile-phone">Phone Number <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+              <div className="form-row two-columns">
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="contact-mobile-phone">
+                    Phone Number <span className="required-mark">*</span>
+                  </FormLabel>
             <TextInput
               id="contactMobilePhoneRaw"
               type="tel"
               labelText=""
               placeholder={getPhonePlaceholder(selectedCountry?.code)}
-              value={contactMobilePhoneFormatted} // Always show formatted value
+                    value={contactMobilePhoneFormatted}
               onChange={(e) => handlePhoneNumberChange(e, selectedCountry?.code, setContactMobilePhoneRaw, setContactMobilePhoneFormatted, setContactMobilePhoneError)}
               onBlur={() => {
                 validatePhoneNumber(contactMobilePhoneRaw, selectedCountry?.code, "Contact Phone", setContactMobilePhoneError);
@@ -749,44 +746,70 @@ function HotelNewForm() {
               invalid={!!contactMobilePhoneError || !!fieldErrors.contactMobilePhoneRaw}
               invalidText={contactMobilePhoneError || fieldErrors.contactMobilePhoneRaw}
               maxLength={250}
-              style={{ width: '100%' }}
+                    className="form-input"
             />
           </div>
-        </div>
-        <div style={formRowStyle}>
-          <FormLabel style={labelStyle} htmlFor="contact-email">Email <span style={{color: 'red'}}>*</span></FormLabel>
-          <div style={inputContainerStyle}>
+                <div className="form-field">
+                  <FormLabel className="field-label" htmlFor="contact-email">
+                    Email <span className="required-mark">*</span>
+                  </FormLabel>
             <TextInput
               id="contactEmail"
               type="email"
               labelText=""
-              placeholder="e.g., contact@example.com"
+                    placeholder="Enter email address"
               value={contactEmail}
               onChange={(e) => setContactEmail(e.target.value)}
               onBlur={() => handleBlur('contactEmail')}
               invalid={!!fieldErrors.contactEmail}
               invalidText={fieldErrors.contactEmail}
               maxLength={250}
-              style={{ width: '100%' }}
+                    className="form-input"
             />
+                </div>
+              </div>
           </div>
         </div>
 
-        <div style={buttonContainerStyle}>
-          <Button kind="secondary" type="button" onClick={handleCancelAttempt} disabled={isSubmitting}>Cancel</Button>
-          <Button type="submit" kind="primary" disabled={isSubmitting || loadingChains || loadingBrands}>
-            {isSubmitting ? 'Saving...' : 'Save Hotel'}
+          {/* Form Actions */}
+          <div className="form-actions">
+            <Button 
+              kind="secondary" 
+              type="button" 
+              onClick={handleCancelAttempt} 
+              disabled={isSubmitting}
+              className="cancel-button"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              kind="primary" 
+              disabled={isSubmitting || loadingChains || loadingBrands}
+              className="submit-button"
+            >
+              {isSubmitting ? 'Saving...' : 'Save Property'}
           </Button>
         </div>
       </Form>
+      </div>
 
+      {/* Cancel Confirmation Modal */}
       <ComposedModal open={openCancelModal} onClose={closeModal} preventCloseOnClickOutside={false} size="sm">
         <ModalHeader title="Discard Changes?" closeModal={closeModal} />
-        <ModalBody><p style={{ marginBottom: '1rem' }}>This action will discard ALL unsaved changes.</p><p>Are you sure you want to proceed?</p></ModalBody>
-        <ModalFooter><Button kind="secondary" onClick={closeModal}>No</Button><Button kind="danger" onClick={proceedWithCancel}>Yes, Discard</Button></ModalFooter>
+        <ModalBody>
+          <p style={{ marginBottom: '1rem' }}>This action will discard ALL unsaved changes.</p>
+          <p>Are you sure you want to proceed?</p>
+        </ModalBody>
+        <ModalFooter>
+          <Button kind="secondary" onClick={closeModal}>No</Button>
+          <Button kind="danger" onClick={proceedWithCancel}>Yes, Discard</Button>
+        </ModalFooter>
       </ComposedModal>
     </div>
   );
 }
+
+import './HotelNewForm.css';
 
 export default HotelNewForm;

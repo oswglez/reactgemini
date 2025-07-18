@@ -25,7 +25,9 @@ function EnvironmentIndicator() {
   }, []);
 
   return (
-    <div style={{ 
+    <div 
+      data-env-indicator="true"
+      style={{ 
       position: 'fixed', 
       bottom: '10px', 
       right: '10px', 
@@ -36,8 +38,14 @@ function EnvironmentIndicator() {
       zIndex: 1000,
       border: '1px solid #ccc',
       maxWidth: '300px',
-      wordBreak: 'break-all'
+        wordBreak: 'break-all',
+        display: 'none' // Oculto por defecto
     }}>
+      {/* 
+        EnvironmentIndicator - Para activar:
+        1. Descomenta la línea <EnvironmentIndicator /> en App.jsx
+        2. O ejecuta en consola: document.querySelector('[data-env-indicator]')?.style.display = 'block'
+      */}
       <div>Current Environment: <strong>{currentEnv || 'development'}</strong></div>
       <div>API Base URL: <strong>{baseUrl || 'http://localhost:8090'}</strong></div>
       <div>Available Environments: {getAvailableEnvironments().join(', ')}</div>
