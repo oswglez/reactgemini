@@ -112,6 +112,11 @@ function App() {
         {/* Hotel Edit Form Route - Direct access without sidebar */}
         <Route path="/hotel/edit/:hotelId" element={<HotelEditForm />} />
 
+        {/* Room Type Routes - Direct access without sidebar */}
+        <Route path="/types/room" element={<RoomTypeList />} />
+        <Route path="/types/room/new" element={<RoomTypeForm />} />
+        <Route path="/types/room/edit/:id" element={<RoomTypeForm />} />
+
         {/* Other routes with AppLayout for sidebar navigation */}
         <Route path="/admin" element={<AppLayout />}>
           {/* Redirección de /types a /types-management */}
@@ -128,10 +133,6 @@ function App() {
           <Route path="types/amenity" element={<AmenityTypeList />} />
           <Route path="types/amenity/new" element={<AmenityTypeForm />} />
           <Route path="types/amenity/edit/:id" element={<AmenityTypeForm />} />
-          
-          <Route path="types/room" element={<RoomTypeList />} />
-          <Route path="types/room/new" element={<RoomTypeForm />} />
-          <Route path="types/room/edit/:id" element={<RoomTypeForm />} />
 
           {/* Listado de Hoteles */}
           <Route path="hotel-list" element={<HotelList />} />

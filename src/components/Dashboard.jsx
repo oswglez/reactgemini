@@ -296,9 +296,11 @@ const Dashboard = () => {
                 onClick={() => {
                   if (card.title === 'Hotels') {
                     navigate('/hotels');
+                  } else if (card.title === 'Room Types') {
+                    navigate('/types/room');
                   }
                 }}
-                style={{ cursor: card.title === 'Hotels' ? 'pointer' : 'default' }}
+                style={{ cursor: (card.title === 'Hotels' || card.title === 'Room Types') ? 'pointer' : 'default' }}
               >
                 <div className="card-header">
                   <div className="card-header-top">
