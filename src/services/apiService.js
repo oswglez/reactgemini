@@ -313,6 +313,33 @@ export const apiService = {
     }
   },
 
+  // Amenities management methods
+  amenities: {
+    getAll: async (page = 0, size = 25, getAccessTokenSilently) => {
+      return apiService.get(`/amenities?page=${page}&size=${size}`, getAccessTokenSilently);
+    },
+
+    getById: async (id, getAccessTokenSilently) => {
+      return apiService.get(`/amenities/${id}`, getAccessTokenSilently);
+    },
+
+    getByType: async (type, page = 0, size = 25, getAccessTokenSilently) => {
+      return apiService.get(`/amenities/type/${type}?page=${page}&size=${size}`, getAccessTokenSilently);
+    },
+
+    create: async (amenityData, getAccessTokenSilently) => {
+      return apiService.post('/amenities', amenityData, getAccessTokenSilently);
+    },
+
+    update: async (id, amenityData, getAccessTokenSilently) => {
+      return apiService.put(`/amenities/${id}`, amenityData, getAccessTokenSilently);
+    },
+
+    delete: async (id, getAccessTokenSilently) => {
+      return apiService.delete(`/amenities/${id}`, getAccessTokenSilently);
+    }
+  },
+
   // Room Units management methods
   roomUnits: {
     // Get all rooms with pagination

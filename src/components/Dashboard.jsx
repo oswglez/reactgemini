@@ -300,9 +300,11 @@ const Dashboard = () => {
                     navigate('/types/room');
                   } else if (card.title === 'Room Units') {
                     navigate('/room-units');
+                  } else if (card.title === 'Amenities') {
+                    navigate('/amenities');
                   }
                 }}
-                style={{ cursor: (card.title === 'Hotels' || card.title === 'Room Types' || card.title === 'Room Units') ? 'pointer' : 'default' }}
+                style={{ cursor: (card.title === 'Hotels' || card.title === 'Room Types' || card.title === 'Room Units' || card.title === 'Amenities') ? 'pointer' : 'default' }}
               >
                 <div className="card-header">
                   <div className="card-header-top">

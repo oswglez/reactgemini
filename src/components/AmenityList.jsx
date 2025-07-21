@@ -2,137 +2,245 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Loading, InlineNotification, Button, Checkbox, Pagination, DataTable,
-  TableContainer, Table, TableHead, TableRow, TableHeader, TableBody, TableCell,
+  Loading,
+  InlineNotification,
+  Button,
+  RadioButton,
+  Pagination,
+  DataTable,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeader,
+  TableBody,
+  TableCell,
   Modal,
   Search,
   Grid,
-  Column
+  Column,
+  Dropdown
 } from '@carbon/react';
-import { AddFilled, ArrowUp, ArrowDown, TrashCan, Edit, View } from '@carbon/icons-react';
-import { getApiBaseUrl } from '../services/config';
-import { useAuthenticatedFetch } from '../services/apiService';
-
-// Estilos (similares a HotelList, ajusta si es necesario)
-const containerStyle = { marginTop: '1rem', width: '100%', padding: '20px', backgroundColor: '#f9f9f9' };
-const actionButtonStyle = { marginRight: '0.5rem' };
-const headerButtonContainerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' };
-const tableTitleContainerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' };
+import { AddFilled, Edit, TrashCan, Search as SearchIcon, Filter, Home, View, ArrowLeft, Close } from '@carbon/icons-react';
+import { useAuth0 } from '@auth0/auth0-react';
+import { apiService } from '../services/apiService';
+import './AmenityList.css';
 
 function AmenityList() {
   const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
+  
+  // Data states
   const [amenities, setAmenities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [selectedAmenity, setSelectedAmenity] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
   const [totalElements, setTotalElements] = useState(0);
-  const [sortColumn, setSortColumn] = useState(null);
-  const [sortDirection, setSortDirection] = useState('ASC');
+  
+  // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
-
-  const authenticatedFetch = useAuthenticatedFetch();
-
-  // Estados para el modal de eliminación
+  const [selectedAmenityType, setSelectedAmenityType] = useState(null);
+  const [amenityTypes, setAmenityTypes] = useState([]);
+  
+  // Delete modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [amenityToDeleteId, setAmenityToDeleteId] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(null);
+  
+  // User role and permissions states
+  const [userRoleInfo, setUserRoleInfo] = useState(null);
+  const [loadingUserInfo, setLoadingUserInfo] = useState(true);
 
-  const fetchAmenities = useCallback(async (page, size, column, direction) => {
+  // DataTable headers for Lovable design
+  const dataTableHeaders = [
+    { key: 'select', header: '', isSortable: false, style: { width: '60px' } },
+    { key: 'amenityName', header: 'Amenity Name', isSortable: true, style: { width: '200px' } },
+    { key: 'category', header: 'Category', isSortable: true, style: { width: '150px' } },
+    { key: 'status', header: 'Status', isSortable: true, style: { width: '120px' } },
+    { key: 'actions', header: 'Actions', isSortable: false, style: { width: '120px' } },
+  ];
+
+  // Transform amenities data for Lovable design
+  const transformAmenityData = (amenity) => {
+    // Generate a random status for demo purposes (in real app, this would come from backend)
+    const statuses = ['Available', 'Not Available'];
+    const status = statuses[Math.floor(Math.random() * statuses.length)];
+    
+    // Map amenity types to categories
+    const categoryMap = {
+      'HOTEL_SERVICES': 'Service',
+      'GENERAL_FACILITIES': 'General',
+      'ROOM_SERVICES': 'Room',
+      'DINING': 'Dining',
+      'RECREATION': 'Recreation',
+      'WELLNESS': 'Wellness',
+      'BUSINESS': 'Business',
+      'ACCESSIBILITY': 'Accessibility'
+    };
+    
+    return {
+      id: amenity.amenityId.toString(),
+      amenityId: amenity.amenityId,
+      amenityName: amenity.amenityDescription || amenity.amenityCode,
+      category: categoryMap[amenity.amenityType] || amenity.amenityType,
+      status: status,
+      amenityCode: amenity.amenityCode,
+      amenityDescription: amenity.amenityDescription,
+      amenityType: amenity.amenityType,
+    };
+  };
+
+  // Use amenities directly since filtering is now handled in fetchAmenities
+  const filteredAmenities = amenities;
+  
+  const tableRows = filteredAmenities.map(transformAmenityData);
+
+  // Get user role information
+  const getUserRoleInfo = async () => {
+    try {
+      console.log('🔍 Fetching user role info for amenities...');
+      const response = await apiService.userContext.getCurrent(getAccessTokenSilently);
+      console.log('🔍 User context response:', response);
+      
+      if (response && response.currentRoles) {
+        console.log('🔍 Current roles:', response.currentRoles);
+        
+        // Find the highest role level
+        const roleHierarchy = ['SUPER_USER', 'CHAIN_ADMIN', 'BRAND_ADMIN', 'HOTEL_ADMIN', 'HOTEL_MANAGER', 'HOTEL_STAFF', 'HOTEL_VIEWER'];
+        let highestRole = null;
+        
+        for (const role of response.currentRoles) {
+          const roleIndex = roleHierarchy.indexOf(role.roleName);
+          if (roleIndex !== -1 && (highestRole === null || roleIndex < roleHierarchy.indexOf(highestRole))) {
+            highestRole = role.roleName;
+          }
+        }
+        
+        console.log('🔍 Highest role found:', highestRole);
+        
+        const canEdit = highestRole && ['SUPER_USER', 'CHAIN_ADMIN', 'BRAND_ADMIN', 'HOTEL_ADMIN'].includes(highestRole);
+        const canDelete = highestRole && ['SUPER_USER', 'CHAIN_ADMIN', 'BRAND_ADMIN'].includes(highestRole);
+        const canCreate = highestRole && ['SUPER_USER', 'CHAIN_ADMIN', 'BRAND_ADMIN', 'HOTEL_ADMIN'].includes(highestRole);
+        
+        console.log('🔍 Permissions - canEdit:', canEdit, 'canDelete:', canDelete, 'canCreate:', canCreate);
+        
+        setUserRoleInfo({
+          roles: response.currentRoles,
+          highestRole: highestRole,
+          canEdit: canEdit,
+          canDelete: canDelete,
+          canCreate: canCreate
+        });
+      } else {
+        console.warn('⚠️ No currentRoles found in response');
+        setUserRoleInfo({
+          roles: [],
+          highestRole: null,
+          canEdit: false,
+          canDelete: false,
+          canCreate: false
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error fetching user role info:', error);
+      setUserRoleInfo({
+        roles: [],
+        highestRole: null,
+        canEdit: false,
+        canDelete: false,
+        canCreate: false
+      });
+    } finally {
+      setLoadingUserInfo(false);
+    }
+  };
+
+  // Fetch amenity types for filter
+  const fetchAmenityTypes = useCallback(async () => {
+    try {
+      const data = await apiService.amenityTypes.getAll(0, 100, getAccessTokenSilently);
+      const items = (data.content || data || []).map(type => ({
+        id: type.amenityTypeName || type.amenity_types_name,
+        text: type.amenityTypeName || type.amenity_types_name
+      }));
+      setAmenityTypes(items);
+    } catch (err) {
+      console.error('Error fetching amenity types:', err);
+      setAmenityTypes([]);
+    }
+  }, [getAccessTokenSilently]);
+
+  // Fetch amenities
+  const fetchAmenities = useCallback(async (page, size) => {
     setLoading(true);
     setError(null);
     setDeleteError(null);
     setDeleteSuccess(null);
 
     try {
-      let url = `/amenities?page=${page}&size=${size}`;
+      let allAmenities = [];
       
-      // Mapear las columnas del frontend a las del backend
-      const columnMapping = {
-        'amenityCode': 'amenityCode',
-        'amenityDescription': 'amenityDescription', 
-        'amenityType': 'amenityType'
-      };
-      
-      if (column && direction && columnMapping[column]) {
-        const backendColumn = columnMapping[column];
-        url += `&sort=${backendColumn},${direction.toLowerCase()}`;
+      // Siempre obtener todos los amenities cuando hay búsqueda o filtro de tipo
+      if (selectedAmenityType || searchTerm) {
+        const allData = await apiService.amenities.getAll(0, 1000, getAccessTokenSilently);
+        allAmenities = allData.content || [];
+        
+        // Filtrar por tipo si está seleccionado
+        if (selectedAmenityType) {
+          allAmenities = allAmenities.filter(amenity => 
+            amenity.amenityType === selectedAmenityType
+          );
+        }
+        
+        // Filtrar por búsqueda si hay término de búsqueda
+        if (searchTerm) {
+          allAmenities = allAmenities.filter(amenity => 
+            amenity.amenityCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            amenity.amenityDescription.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            amenity.amenityType.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }
+      } else {
+        // Sin filtros: Usar paginación normal del backend
+        const data = await apiService.amenities.getAll(page, size, getAccessTokenSilently);
+        allAmenities = (data.content || []).map(amenity => {
+          console.log('=== AMENITY DATA ===');
+          console.log('Amenity ID:', amenity.amenityId);
+          console.log('Amenity Code:', amenity.amenityCode);
+          console.log('Amenity Description:', amenity.amenityDescription);
+          console.log('Amenity Type:', amenity.amenityType);
+          console.log('=== END AMENITY DATA ===');
+          return amenity;
+        });
       }
+
+      // Aplicar paginación a los datos filtrados/completos
+      const startIndex = page * size;
+      const endIndex = startIndex + size;
+      const paginatedAmenities = allAmenities.slice(startIndex, endIndex);
       
-      console.log('Fetching URL:', url);
-      const response = await authenticatedFetch(url);
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not fetch amenities'}. Body: ${errorBody}`);
-      }
-      const data = await response.json();
-      console.log('Data received from API:', data);
-
-      const mappedAmenities = (data.content || []).map(amenity => ({
-        id: amenity.amenityId.toString(),
-        amenityId: amenity.amenityId,
-        amenityCode: amenity.amenityCode,
-        amenityDescription: amenity.amenityDescription,
-        amenityType: amenity.amenityType,
-      }));
-
-      setAmenities(mappedAmenities);
-      setTotalElements(data.totalElements || 0);
-      setCurrentPage(data.number || 0);
-      setPageSize(data.size || 25);
+      setAmenities(paginatedAmenities);
+      setTotalElements(allAmenities.length);
+      setCurrentPage(page);
+      setPageSize(size);
     } catch (err) {
-      setError(err.message || 'Could not load amenity list.');
+      const errorMessage = err.message || 'Could not load amenities list.';
+      setError(errorMessage);
       console.error('Error fetching amenities:', err);
       setAmenities([]);
       setTotalElements(0);
+      
+      // Clear any existing selection when there's an error
+      setSelectedAmenity(null);
     } finally {
       setLoading(false);
     }
-  }, [authenticatedFetch]);
+  }, [getAccessTokenSilently, selectedAmenityType, searchTerm]);
 
-  useEffect(() => {
-    console.log('useEffect triggered with:', { currentPage, pageSize, sortColumn, sortDirection });
-    fetchAmenities(currentPage, pageSize, sortColumn, sortDirection);
-  }, [fetchAmenities, currentPage, pageSize, sortColumn, sortDirection]);
-
-  // --- Sort Handlers ---
-  const handleSort = useCallback((columnKey) => {
-    console.log(`handleSort called for column: ${columnKey}`);
-    console.log(`Current sort state: column=${sortColumn}, direction=${sortDirection}`);
-    
-    // Ignorar la columna de selección
-    if (columnKey === 'select') {
-      return;
-    }
-    
-    let newDirection = 'ASC';
-    if (sortColumn === columnKey) {
-      newDirection = sortDirection === 'ASC' ? 'DESC' : 'ASC';
-    }
-    
-    console.log(`Setting new sort: column=${columnKey}, direction=${newDirection}`);
-      setSortColumn(columnKey);
-    setSortDirection(newDirection);
-    
-    // Reset a la primera página cuando se cambia el ordenamiento
-    if (currentPage !== 0) {
-      setCurrentPage(0);
-    }
-  }, [sortColumn, sortDirection, currentPage]);
-
-  const getSortIcon = useCallback((columnKey) => {
-    if (sortColumn === columnKey) {
-      return sortDirection === 'ASC' ? <ArrowUp size={16} /> : <ArrowDown size={16} />;
-    }
-    return null;
-  }, [sortColumn, sortDirection]);
-
-  // --- DataTable Headers ---
-  const tableRows = amenities;
-
-  // --- Pagination Handlers ---
+  // Pagination handlers
   const handlePaginationChange = ({ page, pageSize: newPageSize }) => {
     const newRequestedPage = page - 1;
     if (newPageSize !== pageSize) {
@@ -143,42 +251,18 @@ function AmenityList() {
     }
   };
 
-  // --- Row Selection Handlers ---
-  const handleRowCheckboxChange = (rowId) => {
-    setSelectedRows(prevSelectedRows => {
-      const newSelectedRows = new Set(prevSelectedRows);
-      if (newSelectedRows.has(rowId)) {
-        newSelectedRows.delete(rowId);
-      } else {
-        newSelectedRows.add(rowId);
-      }
-      return newSelectedRows;
-    });
+  // Row selection handlers (single selection for Lovable design)
+  const handleRowSelection = (rowId) => {
+    const amenity = amenities.find(a => a.amenityId.toString() === rowId);
+    setSelectedAmenity(amenity);
   };
 
-  const isRowSelected = (rowId) => selectedRows.has(rowId);
-
-  const handleSelectAll = (event) => {
-    if (event.target.checked) {
-      const allRowIds = new Set(tableRows.map(row => row.id));
-      setSelectedRows(allRowIds);
-    } else {
-      setSelectedRows(new Set());
-    }
-  };
-
-  const areAllRowsSelected = tableRows.length > 0 && selectedRows.size === tableRows.length;
-  const isIndeterminate = selectedRows.size > 0 && selectedRows.size < tableRows.length;
-
-  // --- Delete Modal Handlers ---
-  const openDeleteModal = () => {
-    if (selectedRows.size === 1) {
-      const selectedAmenityId = Array.from(selectedRows)[0];
-      setAmenityToDeleteId(selectedAmenityId);
-      setShowDeleteModal(true);
-      setDeleteError(null);
-      setDeleteSuccess(null);
-    }
+  // Delete handlers
+  const openDeleteModal = (amenityId) => {
+    setAmenityToDeleteId(amenityId);
+    setShowDeleteModal(true);
+    setDeleteError(null);
+    setDeleteSuccess(null);
   };
 
   const closeDeleteModal = () => {
@@ -190,277 +274,378 @@ function AmenityList() {
 
   const handleDeleteConfirm = async () => {
     if (!amenityToDeleteId) return;
-
+    
     setLoading(true);
     setDeleteError(null);
     setDeleteSuccess(null);
-
+    
     try {
-      const response = await authenticatedFetch(`/amenities/${amenityToDeleteId}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP Error ${response.status}: ${errorBody || 'Could not delete amenity'}`);
-      }
-
-      setDeleteSuccess('Amenity deleted successfully');
-      closeDeleteModal();
-      setSelectedRows(new Set());
-      fetchAmenities(currentPage, pageSize, sortColumn, sortDirection);
-
+      await apiService.amenities.delete(amenityToDeleteId, getAccessTokenSilently);
+      setDeleteSuccess('Amenity deleted successfully!');
+      setSelectedAmenity(null);
+      
+      // Refresh the list
+      setTimeout(() => {
+        fetchAmenities(currentPage, pageSize);
+        closeDeleteModal();
+      }, 1000);
     } catch (err) {
+      setDeleteError(err.message || 'Error deleting amenity');
       console.error('Error deleting amenity:', err);
-      setDeleteError(err.message || 'Could not delete amenity');
     } finally {
       setLoading(false);
     }
   };
 
+  // Search handler
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
     setCurrentPage(0); // Reset to first page when searching
   };
 
-  // Filter amenities based on search term
-  const filteredAmenities = amenities.filter(amenity =>
-    amenity.amenityCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    amenity.amenityDescription?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    amenity.amenityType?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter handler
+  const handleFilterChange = ({ selectedItem }) => {
+    setSelectedAmenityType(selectedItem ? selectedItem.id : null);
+    setCurrentPage(0); // Reset to first page when filtering
+  };
 
-  const headers = [
-    { key: 'select', header: '', isSortable: false },
-    { key: 'amenityCode', header: 'Amenity Code', isSortable: true },
-    { key: 'amenityDescription', header: 'Description', isSortable: true },
-    { key: 'amenityType', header: 'Type', isSortable: true }
-  ];
+  // Clear all filters handler
+  const handleClearFilters = () => {
+    setSelectedAmenityType(null);
+    setSearchTerm('');
+    setCurrentPage(0);
+  };
 
-  const rows = filteredAmenities.map(amenity => ({
-    id: amenity.id,
-    amenityCode: amenity.amenityCode || 'N/A',
-    amenityDescription: amenity.amenityDescription || 'N/A',
-    amenityType: amenity.amenityType || 'N/A'
-  }));
+  // Initialize data
+  useEffect(() => {
+    getUserRoleInfo();
+    fetchAmenityTypes();
+  }, [getAccessTokenSilently]);
+
+  useEffect(() => {
+    if (!loadingUserInfo) {
+      fetchAmenities(currentPage, pageSize);
+    }
+  }, [fetchAmenities, currentPage, pageSize, loadingUserInfo]);
+
+  if (loadingUserInfo) {
+    return (
+      <div className="loading-container">
+        <Loading description="Loading user permissions..." withOverlay={false} />
+      </div>
+    );
+  }
 
   return (
-    <div style={containerStyle}>
-      <h2 style={{ textAlign: 'center', color: '#3751ff', marginBottom: '10px' }}>
-        Manage Amenities
-      </h2>
-      <p style={{ fontSize: '0.875rem', color: '#555', marginBottom: '20px', textAlign: 'center' }}>
-        View and manage all amenities available in the system.
-        You can create new amenities, view/edit existing ones, or delete them.
-      </p>
-
-      <div style={headerButtonContainerStyle}>
-        <div>
-          <p style={{ margin: 0, fontSize: '0.875rem', color: '#666' }}>
-            API URL: {getApiBaseUrl()}/api/amenities
-          </p>
-        </div>
-        <Link to="/amenities/new" style={{ textDecoration: 'none' }}>
-          <Button kind="primary" renderIcon={AddFilled}>Create New Amenity</Button>
-        </Link>
-      </div>
-
-      <div style={tableTitleContainerStyle}>
-        <h3>List of Amenities ({totalElements})</h3>
-        <div>
-          <Button
-            kind="secondary"
-            renderIcon={Edit}
-            style={actionButtonStyle}
-            disabled={selectedRows.size !== 1}
-            onClick={() => {
-              if (selectedRows.size === 1) {
-                const selectedAmenity = amenities.find(a => a.id === Array.from(selectedRows)[0]);
-                navigate(`/amenities/edit/${selectedAmenity.amenityId}`);
-              }
-            }}
-          >
-            View/Edit Details
-          </Button>
-          <Button
-            kind="danger"
-            renderIcon={TrashCan}
-            style={actionButtonStyle}
-            disabled={selectedRows.size !== 1}
-            onClick={openDeleteModal}
-          >
-            Delete Amenity
-          </Button>
+    <div className="amenity-list-container">
+      {/* Header Section */}
+      <div className="header-section">
+        <div className="header-content">
+          <div className="header-text">
+            <Link to="/" className="back-button">
+              <Home size={14} className="back-icon" />
+              Back to Home
+            </Link>
+            <h1 className="header-title">Hotel Amenities</h1>
+            <p className="header-subtitle">View and manage your hotel amenities and their availability status</p>
+          </div>
         </div>
       </div>
 
-      {sortColumn && (
-        <div style={{ 
-          marginBottom: '1rem', 
-          padding: '0.5rem', 
-          backgroundColor: '#e0e0e0', 
-          borderRadius: '4px',
-          fontSize: '0.875rem'
-        }}>
-          <strong>Sorted by:</strong> {headers.find(h => h.key === sortColumn)?.header} 
-          ({sortDirection === 'ASC' ? 'Ascending' : 'Descending'})
-        </div>
-      )}
-
-      <div style={{ marginBottom: '1rem' }}>
-        <Search
-          size="md"
-          labelText="Search amenities"
-          placeholder="Search by code, description, or type..."
-          value={searchTerm}
-          onChange={handleSearch}
-          style={{ maxWidth: '400px' }}
-        />
-      </div>
-
-      {loading && <Loading description="Loading amenities..." withOverlay={false} style={{ marginTop: '2rem' }} />}
-      {!loading && error && (
-        <InlineNotification
-          kind="error"
-          title="Error Loading List"
-          subtitle={error}
-          onCloseButtonClick={() => setError(null)}
-          lowContrast
-          style={{ marginBottom: '1rem' }}
-        />
-      )}
-      {deleteError && (
-        <InlineNotification
-          kind="error"
-          title="Deletion Failed"
-          subtitle={deleteError}
-          onCloseButtonClick={() => setDeleteError(null)}
-          lowContrast
-          style={{ marginBottom: '1rem' }}
-        />
-      )}
-      {deleteSuccess && (
-        <InlineNotification
-          kind="success"
-          title="Success"
-          subtitle={deleteSuccess}
-          onCloseButtonClick={() => setDeleteSuccess(null)}
-          lowContrast
-          style={{ marginBottom: '1rem' }}
-        />
-      )}
-
-      {!loading && !error && (
-        <>
-          {amenities.length === 0 ? (
-            <p style={{ textAlign: 'center', marginTop: '2rem' }}>No amenities registered yet.</p>
-          ) : (
-            <DataTable rows={rows} headers={headers} isSortable>
-              {({ rows, headers, getHeaderProps, getRowProps, getTableProps }) => (
-                <TableContainer>
-                  <Table {...getTableProps()} size="md" useZebraStyles={false}>
-                    <TableHead>
-                      <TableRow>
-                        {headers.map((header) => {
-                          const { ...restOfHeaderProps } = getHeaderProps({ header });
-                          return (
-                            <TableHeader
-                              key={header.key}
-                              {...restOfHeaderProps}
-                              onClick={() => {
-                                if (header.isSortable) {
-                                  handleSort(header.key);
-                                }
-                              }}
-                              style={{ 
-                                ...header.style, 
-                                ...(restOfHeaderProps.style || {}),
-                                cursor: header.isSortable ? 'pointer' : 'default'
-                              }}
-                              isSortable={header.isSortable}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              {header.header === '' && amenities.length > 0 ? (
-                                <Checkbox
-                                  id="select-all-checkbox"
-                                  labelText=""
-                                  onChange={handleSelectAll}
-                                  checked={areAllRowsSelected}
-                                  indeterminate={isIndeterminate}
-                                />
-                                ) : (
-                                  <span>{header.header}</span>
-                                )}
-                              {header.isSortable && header.header !== '' && (
-                                <span style={{ marginLeft: '8px' }}>{getSortIcon(header.key)}</span>
-                              )}
-                              </div>
-                            </TableHeader>
-                          );
-                        })}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {rows.map((row) => (
-                        <TableRow {...getRowProps({ row })} key={row.id} className={isRowSelected(row.id) ? 'cds--data-table--selected' : ''}>
-                          {row.cells.map((cell) => {
-                            if (cell.info.header === 'select') {
-                              return (
-                                <TableCell key={cell.id}>
-                                  <Checkbox
-                                    id={`checkbox-${row.id}`}
-                                    labelText=""
-                                    onChange={() => handleRowCheckboxChange(row.id)}
-                                    checked={isRowSelected(row.id)}
-                                  />
-                                </TableCell>
-                              );
-                            }
-                            return (
-                              <TableCell key={cell.id}>
-                                {cell.value !== null && cell.value !== undefined ? cell.value.toString() : 'N/A'}
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+      {/* Main Content */}
+      <div className="main-content">
+        <div className="content-layout">
+          {/* Detail View Area */}
+          <div className="detail-view-area">
+            <div className="detail-card">
+              {selectedAmenity ? (
+                <div className="amenity-details">
+                  <div className="detail-header">
+                    <h3 className="detail-title">Amenity Details</h3>
+                    <div className="detail-header-actions">
+                      {userRoleInfo.canEdit && (
+                        <Button
+                          kind="primary"
+                          onClick={() => navigate(`/amenities/edit/${selectedAmenity.amenityId}`)}
+                          className="header-action-button edit-button"
+                        >
+                          Edit
+                        </Button>
+                      )}
+                      {userRoleInfo.canDelete && (
+                        <Button
+                          kind="danger"
+                          onClick={() => openDeleteModal(selectedAmenity.amenityId)}
+                          className="header-action-button mark-inactive-button"
+                        >
+                          Mark Inactive
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="detail-info">
+                    <div className="detail-grid">
+                      <div className="detail-field">
+                        <span className="detail-label">Code:</span>
+                        <span className="detail-value">{selectedAmenity.amenityCode}</span>
+                      </div>
+                      <div className="detail-field">
+                        <span className="detail-label">Category:</span>
+                        <span className="detail-value">{selectedAmenity.amenityType}</span>
+                      </div>
+                      <div className="detail-field">
+                        <span className="detail-label">Amenity Name:</span>
+                        <span className="detail-value">{selectedAmenity.amenityDescription || selectedAmenity.amenityCode}</span>
+                      </div>
+                      <div className="detail-field">
+                        <span className="detail-label">Status:</span>
+                        <span className="detail-value">
+                          <span className={`status-pill ${selectedAmenity.amenityStatus === 'ACTIVE' ? 'available' : 'not-available'}`}>
+                            {selectedAmenity.amenityStatus === 'ACTIVE' ? 'Available' : 'Not Available'}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="no-selection">
+                  <p>Select an amenity to view its details</p>
+                </div>
               )}
-            </DataTable>
-          )}
-          {totalElements > 0 && amenities.length > 0 && (
-            <Pagination
-              totalItems={totalElements}
-              pageSize={pageSize}
-              pageSizes={[10, 25, 50, 100]}
-              page={currentPage + 1}
-              onChange={handlePaginationChange}
-              style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center' }}
-            />
-          )}
-        </>
-      )}
+            </div>
+          </div>
 
+          {/* Amenities List Area */}
+          <div className="amenities-list-area">
+            {/* Available Amenities Header */}
+            <div className="amenities-header">
+              <h2 className="amenities-title">Available Amenities</h2>
+              {userRoleInfo.canCreate && (
+                <Link to="/amenities/new" style={{ textDecoration: 'none' }}>
+                  <Button kind="primary" renderIcon={AddFilled} className="add-amenity-button">
+                    + Add Amenity
+                  </Button>
+                </Link>
+              )}
+            </div>
+
+            {/* Controls Section */}
+            <div className="controls-section">
+              <div className="search-filter-row">
+                <div className="search-container">
+                  <Search
+                    size="md"
+                    placeholder="Search amenities..."
+                    value={searchTerm}
+                    onChange={handleSearch}
+                    className="search-input"
+                  />
+                </div>
+                <div className="filter-container">
+                  <Dropdown
+                    id="amenityTypeFilter"
+                    titleText="Filter by Type"
+                    label="All Types"
+                    items={amenityTypes}
+                    itemToString={item => (item ? item.text : '')}
+                    selectedItem={amenityTypes.find(opt => opt.id === selectedAmenityType) || null}
+                    onChange={handleFilterChange}
+                    className="filter-dropdown"
+                  />
+                </div>
+                {(selectedAmenityType || searchTerm) && (
+                  <div className="clear-filters-container">
+                    <Button
+                      kind="ghost"
+                      size="sm"
+                      renderIcon={Close}
+                      onClick={handleClearFilters}
+                      className="clear-filters-button"
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Notifications */}
+              {!loading && error && (
+                <InlineNotification
+                  kind="error"
+                  title="Error Loading List"
+                  subtitle={error}
+                  onCloseButtonClick={() => setError(null)}
+                  lowContrast
+                  className="notification"
+                />
+              )}
+              {deleteError && (
+                <InlineNotification
+                  kind="error"
+                  title="Deletion Failed"
+                  subtitle={deleteError}
+                  onCloseButtonClick={() => setDeleteError(null)}
+                  lowContrast
+                  className="notification"
+                />
+              )}
+              {deleteSuccess && (
+                <InlineNotification
+                  kind="success"
+                  title="Success"
+                  subtitle={deleteSuccess}
+                  onCloseButtonClick={() => setDeleteSuccess(null)}
+                  lowContrast
+                  className="notification"
+                />
+              )}
+
+              {/* Loading State */}
+              {loading && (
+                <div className="loading-container">
+                  <Loading description="Loading amenities..." withOverlay={false} />
+                </div>
+              )}
+
+              {/* Data Table */}
+              {!loading && !error && (
+                <>
+                  {filteredAmenities.length === 0 ? (
+                    <div className="no-data">
+                      <p>No amenities found.</p>
+                      {userRoleInfo.canCreate && (
+                        <Link to="/amenities/new" style={{ textDecoration: 'none' }}>
+                          <Button kind="primary" renderIcon={AddFilled} className="create-button">
+                            + Add Amenity
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  ) : (
+                    <DataTable rows={tableRows} headers={dataTableHeaders} isSortable>
+                      {({ rows: dtRows, headers: dtHeaders, getHeaderProps, getRowProps, getTableProps }) => (
+                        <TableContainer>
+                          <Table {...getTableProps()} size="md" useZebraStyles={false} className="amenity-table">
+                            <TableHead>
+                              <TableRow>
+                                {dtHeaders.map((header) => {
+                                  const { key, ...restOfHeaderProps } = getHeaderProps({ header });
+                                  return (
+                                    <TableHeader
+                                      key={key}
+                                      {...restOfHeaderProps}
+                                      style={{ ...header.style, ...(restOfHeaderProps.style || {}) }}
+                                      isSortable={header.isSortable}
+                                      className="table-header"
+                                    >
+                                      {header.header}
+                                    </TableHeader>
+                                  );
+                                })}
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {dtRows.map((row) => (
+                                <TableRow
+                                  key={row.id}
+                                  {...getRowProps({ row })}
+                                  className={selectedAmenity?.amenityId.toString() === row.id ? 'selected-row' : ''}
+                                  onClick={() => handleRowSelection(row.id)}
+                                >
+                                  {row.cells.map((cell) => {
+                                    if (cell.id.includes('select')) {
+                                      return (
+                                        <TableCell key={cell.id}>
+                                          <RadioButton
+                                            id={`radio-${row.id}`}
+                                            name="amenity-selection"
+                                            checked={selectedAmenity?.amenityId.toString() === row.id}
+                                            onChange={() => handleRowSelection(row.id)}
+                                            className="row-radio"
+                                          />
+                                        </TableCell>
+                                      );
+                                    }
+                                    if (cell.id.includes('status')) {
+                                      const isAvailable = cell.value === 'Available';
+                                      return (
+                                        <TableCell key={cell.id} className="table-cell">
+                                          <span className={`status-pill ${isAvailable ? 'available' : 'not-available'}`}>
+                                            {cell.value}
+                                          </span>
+                                        </TableCell>
+                                      );
+                                    }
+                                    if (cell.id.includes('actions')) {
+                                      return (
+                                        <TableCell key={cell.id} className="table-cell">
+                                          <button
+                                            className="view-details-link"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleRowSelection(row.id);
+                                            }}
+                                          >
+                                            View Details
+                                          </button>
+                                        </TableCell>
+                                      );
+                                    }
+                                    return (
+                                      <TableCell key={cell.id} className="table-cell">
+                                        {cell.value}
+                                      </TableCell>
+                                    );
+                                  })}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      )}
+                    </DataTable>
+                  )}
+
+                  {/* Pagination */}
+                  {filteredAmenities.length > 0 && (
+                    <div className="pagination-container">
+                      <Pagination
+                        page={currentPage + 1}
+                        pageSize={pageSize}
+                        pageSizes={[10, 25, 50, 100]}
+                        totalItems={totalElements}
+                        onChange={handlePaginationChange}
+                        className="pagination"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
       <Modal
         open={showDeleteModal}
+        modalHeading="Delete Amenity"
+        primaryButtonText="Delete"
+        secondaryButtonText="Cancel"
         onRequestClose={closeDeleteModal}
         onRequestSubmit={handleDeleteConfirm}
-        modalHeading="Confirm Deletion"
-        primaryButtonText="YES"
-        secondaryButtonText="NO"
         danger
+        className="delete-modal"
       >
-        <p>You are about to delete this amenity. This action is irreversible. Are you sure?</p>
+        <p>Are you sure you want to delete this amenity? This action cannot be undone.</p>
         {deleteError && (
           <InlineNotification
             kind="error"
-            title="Deletion Failed"
+            title="Error"
             subtitle={deleteError}
-            hideCloseButton
             lowContrast
-            style={{ marginTop: '1rem', marginBottom: '0' }}
+            style={{ marginTop: '1rem' }}
           />
         )}
       </Modal>

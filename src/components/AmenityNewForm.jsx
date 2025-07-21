@@ -1,89 +1,71 @@
 // src/components/AmenityNewForm.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Form,
   TextInput,
   Button,
   Modal,
   InlineNotification,
-  Loading, // Aunque no cargamos datos, lo mantenemos por si se añade lógica futura
+  Loading,
   Grid,
   Column,
   Stack,
   Dropdown,
+  TextArea
 } from '@carbon/react';
-import { Save, Close } from '@carbon/icons-react';
+import { Save, Close, ArrowLeft, Add, Home } from '@carbon/icons-react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { apiService } from '../services/apiService';
-
-// Estilos (pueden ser los mismos que AmenityEditForm)
-const containerStyle = {
-  marginTop: '1rem',
-  width: '100%',
-  padding: '40px',
-  backgroundColor: '#f9f9f9',
-};
-const formStyle = {
-  backgroundColor: '#fff',
-  padding: '30px',
-  borderRadius: '8px',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-};
-const buttonContainerStyle = {
-  marginTop: '2rem',
-  display: 'flex',
-  justifyContent: 'flex-end',
-};
-const actionButtonStyle = {
-  marginLeft: '0.5rem',
-};
+import './AmenityNewForm.css';
 
 function AmenityNewForm() {
   const navigate = useNavigate();
   const { getAccessTokenSilently } = useAuth0();
 
+  // Form data state
   const [amenity, setAmenity] = useState({
     amenityCode: '',
     amenityDescription: '',
     amenityType: '',
   });
   
-  // Estados de error individuales para cada campo
+  // Field validation states
   const [fieldErrors, setFieldErrors] = useState({
     amenityCode: '',
     amenityDescription: '',
     amenityType: '',
   });
   
+  // UI states
   const [amenityTypes, setAmenityTypes] = useState([]);
   const [loadingTypes, setLoadingTypes] = useState(true);
-  // No necesitamos initialAmenity para el formulario de creación
-  // pero hasChanges sí es útil para el modal de cancelación.
-  const [initialFormState] = useState({ // Para comparar si hay cambios
-    amenityCode: '',
-    amenityDescription: '',
-    amenityType: '',
-  });
-
-  const [loading, setLoading] = useState(false); // No se cargan datos inicialmente
   const [saveSuccess, setSaveSuccess] = useState(null);
   const [saveError, setSaveError] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Initial form state for change detection
+  const [initialFormState] = useState({
+    amenityCode: '',
+    amenityDescription: '',
+    amenityType: '',
+  });
+
+  // Fetch amenity types on component mount
   useEffect(() => {
     const fetchAmenityTypes = async () => {
       setLoadingTypes(true);
       try {
         const data = await apiService.amenityTypes.getAll(0, 100, getAccessTokenSilently);
         const options = (data.content || []).map(type => ({
-          id: type.amenityTypeName,
-          text: type.amenityTypeName,
+          id: type.amenityTypeName || type.amenity_types_name,
+          text: type.amenityTypeName || type.amenity_types_name,
         }));
         setAmenityTypes(options);
       } catch (err) {
+        console.error('Error fetching amenity types:', err);
         setSaveError('Failed to load amenity types');
       } finally {
         setLoadingTypes(false);
@@ -92,36 +74,45 @@ function AmenityNewForm() {
     fetchAmenityTypes();
   }, [getAccessTokenSilently]);
 
-  // Function to validate a specific field
+  // Field validation function
   const validateField = (fieldName, value) => {
     switch (fieldName) {
       case 'amenityCode':
         if (!value || value.trim() === '') {
           return 'Amenity code is required';
         }
-        if (value.trim().length < 2) {
-          return 'Code must have at least 2 characters';
+        if (value.length < 2) {
+          return 'Amenity code must be at least 2 characters';
+        }
+        if (value.length > 50) {
+          return 'Amenity code must be less than 50 characters';
         }
         return '';
+      
       case 'amenityDescription':
         if (!value || value.trim() === '') {
-          return 'Description is required';
+          return 'Amenity description is required';
         }
-        if (value.trim().length < 5) {
-          return 'Description must have at least 5 characters';
+        if (value.length < 10) {
+          return 'Amenity description must be at least 10 characters';
+        }
+        if (value.length > 500) {
+          return 'Amenity description must be less than 500 characters';
         }
         return '';
+      
       case 'amenityType':
         if (!value || value.trim() === '') {
           return 'Amenity type is required';
         }
         return '';
+      
       default:
         return '';
     }
   };
 
-  // Function to validate the entire form
+  // Form validation
   const validateForm = () => {
     const errors = {
       amenityCode: validateField('amenityCode', amenity.amenityCode),
@@ -130,214 +121,251 @@ function AmenityNewForm() {
     };
     
     setFieldErrors(errors);
-    
-    // Returns true if there are no errors
     return !Object.values(errors).some(error => error !== '');
   };
 
-  // --- Handle Form Changes ---
+  // Handle input changes
   const handleChange = (e) => {
-    const { id, value } = e.target;
-    setAmenity((prevAmenity) => {
-      const newAmenity = { ...prevAmenity, [id]: value };
-      // Comparamos con el estado inicial del formulario vacío
-      setHasChanges(JSON.stringify(newAmenity) !== JSON.stringify(initialFormState));
-      return newAmenity;
-    });
+    const { name, value } = e.target;
+    setAmenity(prev => ({ ...prev, [name]: value }));
     
-    // Validate the specific field in real time
-    const fieldError = validateField(id, value);
-    setFieldErrors(prev => ({
-      ...prev,
-      [id]: fieldError
-    }));
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+    }
     
-    setSaveError(null); // Clear errors when changing
-    setSaveSuccess(null); // Clear success when changing
+    // Check for changes
+    const newHasChanges = value !== initialFormState[name];
+    setHasChanges(newHasChanges);
   };
 
+  // Handle dropdown changes
   const handleDropdownChange = ({ selectedItem }) => {
-    const selectedValue = selectedItem ? selectedItem.id : '';
-    setAmenity(prev => ({ ...prev, amenityType: selectedValue }));
+    const value = selectedItem ? selectedItem.id : '';
+    setAmenity(prev => ({ ...prev, amenityType: value }));
     
-    // Validate the type field
-    const fieldError = validateField('amenityType', selectedValue);
-    setFieldErrors(prev => ({
-      ...prev,
-      amenityType: fieldError
-    }));
+    // Clear field error when user selects an option
+    if (fieldErrors.amenityType) {
+      setFieldErrors(prev => ({ ...prev, amenityType: '' }));
+    }
     
-    setSaveError(null);
-    setSaveSuccess(null);
-    setHasChanges(true);
+    // Check for changes
+    const newHasChanges = value !== initialFormState.amenityType;
+    setHasChanges(newHasChanges);
   };
 
-  // --- Handle Save (Create New) ---
+  // Handle form submission
   const handleSave = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(null);
-
-    // Validate the entire form before submitting
-    if (!validateForm()) {
-      setIsSaving(false);
-      return;
-    }
-
+    
     try {
-      await apiService.post('/amenities', amenity, getAccessTokenSilently);
+      console.log('=== CREATING AMENITY ===');
+      console.log('Amenity Code:', amenity.amenityCode);
+      console.log('Amenity Description:', amenity.amenityDescription);
+      console.log('Amenity Type:', amenity.amenityType);
+      console.log('=== END AMENITY DATA ===');
+      
+      await apiService.amenities.create(amenity, getAccessTokenSilently);
+      
       setSaveSuccess('Amenity created successfully!');
-      setAmenity({ amenityCode: '', amenityDescription: '', amenityType: '' }); // Clear form
-      setFieldErrors({ amenityCode: '', amenityDescription: '', amenityType: '' }); // Clear errors
-      setHasChanges(false); // Reset changes
-
-      // Optional: Redirect after successful creation
+      setHasChanges(false);
+      
+      // Navigate back to amenities list after a short delay
       setTimeout(() => {
-        navigate('/amenities-list'); // Navigate to amenities list
-      }, 2000); // Wait 2 seconds for user to see the message
-
+        navigate('/amenities');
+      }, 1500);
+      
     } catch (err) {
       console.error('Error creating amenity:', err);
-      setSaveError(err.message || 'Could not create amenity. Please try again.');
+      setSaveError(err.message || 'Failed to create amenity');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // --- Handle Cancel ---
+  // Handle cancel button click
   const handleCancelClick = () => {
     if (hasChanges) {
       setShowCancelModal(true);
     } else {
-      navigate('/amenities-list'); // Si no hay cambios, volver directamente
+      navigate('/amenities');
     }
   };
 
+  // Handle cancel confirmation
   const handleCancelConfirm = () => {
     setShowCancelModal(false);
-    navigate('/amenities-list'); // Navegar a la lista de amenities
+    navigate('/amenities');
   };
 
+  // Handle cancel modal close
   const handleCancelClose = () => {
     setShowCancelModal(false);
   };
 
-  // Check if the form is valid to enable the save button
+  // Check if form is valid
   const isFormValid = () => {
-    return amenity.amenityCode.trim() !== '' && 
-           amenity.amenityDescription.trim() !== '' && 
+    return amenity.amenityCode.trim() !== '' &&
+           amenity.amenityDescription.trim() !== '' &&
            amenity.amenityType.trim() !== '' &&
-           !Object.values(fieldErrors).some(error => error !== '');
+           Object.values(fieldErrors).every(error => error === '');
   };
 
+  if (loadingTypes) {
+    return (
+      <div className="loading-container">
+        <Loading description="Loading amenity types..." withOverlay={false} />
+      </div>
+    );
+  }
+
   return (
-    <div style={containerStyle}>
-      <Grid>
-        <Column lg={16} md={8} sm={4}>
-          <h2 style={{ textAlign: 'center', color: '#3751ff', marginBottom: '20px' }}>
-            Create New Amenity
-          </h2>
+    <div className="amenity-form-container">
+      {/* Header Section */}
+      <div className="header-section">
+        <div className="header-content">
+          <div className="header-text">
+            <Link to="/" className="back-button">
+              <Home size={14} className="back-icon" />
+              Back to Home
+            </Link>
+            <h1 className="header-title">Hotel Amenities</h1>
+            <p className="header-subtitle">View and manage your hotel amenities and their availability status</p>
+          </div>
+        </div>
+      </div>
 
-          {/* No hay sección de carga inicial para 'new' */}
-
-          <Form onSubmit={handleSave} style={formStyle}>
-            <Stack gap={7}>
-              <TextInput
-                id="amenityCode"
-                name="amenityCode"
-                labelText="Amenity Code *"
-                value={amenity.amenityCode}
-                onChange={handleChange}
-                required
-                invalid={fieldErrors.amenityCode !== ''}
-                invalidText={fieldErrors.amenityCode}
-                placeholder="Enter amenity code"
+      {/* Form Section */}
+      <div className="form-section">
+        <div className="form-container">
+          <Form onSubmit={handleSave} className="amenity-form">
+            {/* Notifications */}
+            {saveError && (
+              <InlineNotification
+                kind="error"
+                title="Error"
+                subtitle={saveError}
+                onCloseButtonClick={() => setSaveError(null)}
+                lowContrast={true}
+                className="notification"
               />
-              <TextInput
-                id="amenityDescription"
-                name="amenityDescription"
-                labelText="Description *"
-                value={amenity.amenityDescription}
-                onChange={handleChange}
-                required
-                invalid={fieldErrors.amenityDescription !== ''}
-                invalidText={fieldErrors.amenityDescription}
-                placeholder="Enter amenity description"
+            )}
+            {saveSuccess && (
+              <InlineNotification
+                kind="success"
+                title="Success"
+                subtitle={saveSuccess}
+                onCloseButtonClick={() => setSaveSuccess(null)}
+                lowContrast={true}
+                className="notification"
               />
-              <Dropdown
-                id="amenityType"
-                titleText="Type *"
-                label="Select Amenity Type"
-                items={amenityTypes}
-                itemToString={item => (item ? item.text : '')}
-                selectedItem={amenityTypes.find(item => item.id === amenity.amenityType) || null}
-                onChange={handleDropdownChange}
-                required
-                disabled={loadingTypes || isSaving}
-                invalid={fieldErrors.amenityType !== ''}
-                invalidText={fieldErrors.amenityType}
-                placeholder="Select amenity type"
-              />
+            )}
 
-              {saveError && (
-                <InlineNotification
-                  kind="error"
-                  title="Creation Failed"
-                  subtitle={saveError}
-                  onCloseButtonClick={() => setSaveError(null)}
-                  lowContrast
-                  style={{ marginTop: '1rem' }}
-                />
-              )}
-              {saveSuccess && (
-                <InlineNotification
-                  kind="success"
-                  title="Success"
-                  subtitle={saveSuccess}
-                  onCloseButtonClick={() => setSaveSuccess(null)} // O dejarlo para que desaparezca con la navegación
-                  lowContrast
-                  style={{ marginTop: '1rem' }}
-                />
-              )}
-               {isSaving && <Loading description="Saving amenity..." withOverlay={false} style={{marginTop: '1rem'}} />}
+            {/* Form Fields */}
+            <Grid fullWidth className="form-grid">
+              <Column lg={8} md={8} sm={4} className="form-column">
+                <Stack gap={6} className="form-stack">
+                  
+                  {/* Amenity Code */}
+                  <div className="form-field">
+                    <TextInput
+                      id="amenityCode"
+                      name="amenityCode"
+                      labelText="Amenity Code *"
+                      placeholder="Enter amenity code (e.g., WIFI, POOL, GYM)"
+                      value={amenity.amenityCode}
+                      onChange={handleChange}
+                      invalid={!!fieldErrors.amenityCode}
+                      invalidText={fieldErrors.amenityCode}
+                      className="form-input"
+                      maxLength={50}
+                    />
+                  </div>
 
+                  {/* Amenity Type */}
+                  <div className="form-field">
+                    <Dropdown
+                      id="amenityType"
+                      titleText="Amenity Type *"
+                      label="Select amenity type"
+                      items={amenityTypes}
+                      itemToString={item => (item ? item.text : '')}
+                      selectedItem={amenityTypes.find(opt => opt.id === amenity.amenityType) || null}
+                      onChange={handleDropdownChange}
+                      invalid={!!fieldErrors.amenityType}
+                      invalidText={fieldErrors.amenityType}
+                      className="form-dropdown"
+                    />
+                  </div>
 
-              <div style={buttonContainerStyle}>
-                <Button
-                  kind="secondary"
-                  onClick={handleCancelClick}
-                  renderIcon={Close}
-                  disabled={isSaving}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  kind="primary"
-                  type="submit"
-                  renderIcon={Save}
-                  style={actionButtonStyle}
-                  disabled={isSaving || !isFormValid()} // Disable if not valid or saving
-                >
-                  {isSaving ? 'Creating...' : 'Create Amenity'}
-                </Button>
-              </div>
-            </Stack>
+                  {/* Amenity Description */}
+                  <div className="form-field">
+                    <TextArea
+                      id="amenityDescription"
+                      name="amenityDescription"
+                      labelText="Amenity Description *"
+                      placeholder="Enter a detailed description of the amenity"
+                      value={amenity.amenityDescription}
+                      onChange={handleChange}
+                      invalid={!!fieldErrors.amenityDescription}
+                      invalidText={fieldErrors.amenityDescription}
+                      className="form-textarea"
+                      maxCount={500}
+                      enableCounter={true}
+                      rows={4}
+                    />
+                  </div>
+
+                </Stack>
+              </Column>
+            </Grid>
+
+            {/* Action Buttons */}
+            <div className="action-buttons">
+              <Button
+                kind="secondary"
+                renderIcon={Close}
+                onClick={handleCancelClick}
+                className="cancel-button"
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                kind="primary"
+                renderIcon={Save}
+                type="submit"
+                className="save-button"
+                disabled={!isFormValid() || isSaving}
+              >
+                {isSaving ? 'Creating...' : 'Create Amenity'}
+              </Button>
+            </div>
           </Form>
+        </div>
+      </div>
 
-          <Modal
-            open={showCancelModal}
-            onRequestClose={handleCancelClose}
-            onRequestSubmit={handleCancelConfirm}
-            modalHeading="Unsaved Changes"
-            primaryButtonText="Leave Page"
-            secondaryButtonText="Stay"
-            danger
-          >
-            <p>You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.</p>
-          </Modal>
-        </Column>
-      </Grid>
+      {/* Cancel Confirmation Modal */}
+      <Modal
+        open={showCancelModal}
+        modalHeading="Discard Changes?"
+        primaryButtonText="Discard"
+        secondaryButtonText="Keep Editing"
+        onRequestClose={handleCancelClose}
+        onRequestSubmit={handleCancelConfirm}
+        danger
+        className="cancel-modal"
+      >
+        <p>You have unsaved changes. Are you sure you want to discard them?</p>
+      </Modal>
     </div>
   );
 }

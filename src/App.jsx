@@ -123,6 +123,11 @@ function App() {
         <Route path="/room-units/new" element={<RoomNewForm />} />
         <Route path="/room-units/edit/:id" element={<RoomEditForm />} />
 
+        {/* Amenities Routes - Direct access without sidebar */}
+        <Route path="/amenities" element={<AmenityList />} />
+        <Route path="/amenities/new" element={<AmenityNewForm />} />
+        <Route path="/amenities/edit/:id" element={<AmenityEditForm />} />
+
         {/* Other routes with AppLayout for sidebar navigation */}
         <Route path="/admin" element={<AppLayout />}>
           {/* Redirección de /types a /types-management */}
