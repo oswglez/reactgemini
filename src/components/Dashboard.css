@@ -1,6 +1,6 @@
 /* Dashboard Styles - Full Width Responsive */
 
-/* CSS Variables for IBM Carbon inspired colors */
+/* CSS Variables for IBM Carbon inspired colors - FROM LOVABLE MODEL */
 :root {
   --background: hsl(0, 0%, 99%);
   --foreground: hsl(213, 10%, 16%);
@@ -19,12 +19,20 @@
   --input: hsl(213, 14%, 93%);
   --ring: hsl(208, 100%, 30%);
   
-  /* Gradients */
+  /* Custom Carbon-inspired colors FROM LOVABLE MODEL */
+  --carbon-gray-10: hsl(213, 14%, 96%);
+  --carbon-gray-20: hsl(213, 12%, 93%);
+  --carbon-gray-30: hsl(213, 10%, 86%);
+  --carbon-gray-90: hsl(213, 10%, 21%);
+  --carbon-blue-60: hsl(208, 100%, 30%);
+  --carbon-blue-70: hsl(208, 100%, 26%);
+  
+  /* Gradients FROM LOVABLE MODEL */
   --gradient-primary: linear-gradient(135deg, hsl(208, 100%, 30%), hsl(208, 100%, 26%));
   --gradient-subtle: linear-gradient(180deg, hsl(0, 0%, 99%), hsl(213, 14%, 96%));
   --gradient-card: linear-gradient(145deg, hsl(0, 0%, 100%), hsl(208, 100%, 96%));
   
-  /* Shadows */
+  /* Shadows FROM LOVABLE MODEL */
   --shadow-sm: 0 2px 6px -1px hsl(208, 100%, 30% / 0.08);
   --shadow-md: 0 8px 24px -4px hsl(208, 100%, 30% / 0.12);
   --shadow-lg: 0 20px 40px -8px hsl(208, 100%, 30% / 0.16);
@@ -46,12 +54,16 @@ html, body {
   padding: 0 !important;
   width: 100% !important;
   overflow-x: hidden !important;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
 }
 
 #root {
   width: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
 }
 
 /* Main Container - FORZADO A 100% */
@@ -268,7 +280,7 @@ html, body {
   gap: 0.5rem;
   font-size: 1.125rem;
   font-weight: 600;
-  color: var(--foreground);
+  color: var(--foreground) !important;
   margin: 0;
 }
 
@@ -292,43 +304,79 @@ html, body {
   gap: 1rem;
 }
 
-.action-button {
-  height: auto;
-  min-height: 90px;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
-  border: none;
-  border-radius: var(--radius);
-  background: hsl(0, 0%, 98%);
-  color: hsl(213, 10%, 16%);
-  cursor: pointer;
-  transition: var(--transition-smooth);
-  text-align: left;
+/* Override Carbon button styles with more specific selectors */
+.dashboard-container .quick-actions-grid .action-button,
+.dashboard-container .quick-actions-card .action-button,
+.dashboard-container .quick-actions-grid button,
+.dashboard-container .quick-actions-card button {
+  height: auto !important;
+  min-height: 90px !important;
+  padding: 1rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 0.5rem !important;
+  border: none !important;
+  border-radius: var(--radius) !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  cursor: pointer !important;
+  transition: var(--transition-smooth) !important;
+  text-align: left !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  box-shadow: var(--shadow-sm) !important;
+  outline: none !important;
+  text-decoration: none !important;
 }
 
-.action-button:hover {
-  transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.dashboard-container .quick-actions-grid .action-button:hover,
+.dashboard-container .quick-actions-card .action-button:hover,
+.dashboard-container .quick-actions-grid button:hover,
+.dashboard-container .quick-actions-card button:hover {
+  background: var(--primary-hover) !important;
+  transform: scale(1.02) !important;
+  box-shadow: var(--shadow-md) !important;
+  border-color: transparent !important;
+  outline: none !important;
 }
 
-.action-button.action-carbon:hover {
-  background: hsl(208, 100%, 26%);
-  transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(32, 80, 128, 0.2);
+.dashboard-container .quick-actions-grid .action-button.action-carbon,
+.dashboard-container .quick-actions-card .action-button.action-carbon,
+.dashboard-container .quick-actions-grid button.action-carbon,
+.dashboard-container .quick-actions-card button.action-carbon {
+  background: var(--carbon-blue-60) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
-.action-button.action-carbon {
-  background: hsl(208, 100%, 30%);
-  color: white;
-  border: none;
+.dashboard-container .quick-actions-grid .action-button.action-carbon:hover,
+.dashboard-container .quick-actions-card .action-button.action-carbon:hover,
+.dashboard-container .quick-actions-grid button.action-carbon:hover,
+.dashboard-container .quick-actions-card button.action-carbon:hover {
+  background: var(--carbon-blue-70) !important;
+  transform: scale(1.02) !important;
+  box-shadow: var(--shadow-lg) !important;
 }
 
-.action-button.action-gradient {
-  background: var(--gradient-primary);
-  color: white;
+.dashboard-container .quick-actions-grid .action-button.action-gradient,
+.dashboard-container .quick-actions-card .action-button.action-gradient,
+.dashboard-container .quick-actions-grid button.action-gradient,
+.dashboard-container .quick-actions-card button.action-gradient {
+  background: var(--gradient-primary) !important;
+  color: white !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.dashboard-container .quick-actions-grid .action-button.action-gradient:hover,
+.dashboard-container .quick-actions-card .action-button.action-gradient:hover,
+.dashboard-container .quick-actions-grid button.action-gradient:hover,
+.dashboard-container .quick-actions-card button.action-gradient:hover {
+  background: var(--gradient-primary) !important;
+  transform: scale(1.05) !important;
+  box-shadow: var(--shadow-lg) !important;
 }
 
 .action-icon {
@@ -371,11 +419,18 @@ html, body {
   gap: 1.5rem;
 }
 
-.section-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--foreground);
-  margin: 0;
+/* Override Carbon styles for titles with more specific selectors */
+.dashboard-container .navigation-section .section-title,
+.dashboard-container .quick-actions-card .card-title {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  color: var(--foreground) !important;
+  margin: 0 !important;
+  font-family: inherit !important;
+}
+
+.dashboard-container .quick-actions-card .card-title {
+  font-size: 1.125rem !important;
 }
 
 .navigation-grid {

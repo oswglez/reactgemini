@@ -58,6 +58,14 @@ export const apiService = {
     const token = await getAccessTokenSilently();
     const url = createApiUrl(endpoint);
     
+    console.log('=== API SERVICE - POST REQUEST ===');
+    console.log('URL:', url);
+    console.log('Endpoint:', endpoint);
+    console.log('Data being sent:', data);
+    console.log('Data type:', typeof data);
+    console.log('Data stringified:', JSON.stringify(data, null, 2));
+    console.log('=== END API SERVICE LOGGING ===');
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -68,6 +76,17 @@ export const apiService = {
     });
     
     if (!response.ok) {
+      console.error('=== API SERVICE - ERROR RESPONSE ===');
+      console.error('Status:', response.status);
+      console.error('Status Text:', response.statusText);
+      console.error('URL:', response.url);
+      try {
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+      } catch {
+        console.error('Could not read error response body');
+      }
+      console.error('=== END ERROR LOGGING ===');
       throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
     }
     
@@ -244,8 +263,8 @@ export const apiService = {
 
   // Hotel management methods (enhanced)
   hotels: {
-    getAll: async (getAccessTokenSilently) => {
-      return apiService.get('/hotels/hotelList?page=0&size=1000', getAccessTokenSilently);
+    getAll: async (page = 0, size = 1000, getAccessTokenSilently) => {
+      return apiService.get(`/hotels/hotelList?page=${page}&size=${size}`, getAccessTokenSilently);
     },
 
     getById: async (id, getAccessTokenSilently) => {
@@ -296,6 +315,16 @@ export const apiService = {
 
   // Room Units management methods
   roomUnits: {
+    // Get all rooms with pagination
+    getAll: async (page = 0, size = 25, getAccessTokenSilently) => {
+      return apiService.get(`/rooms?page=${page}&size=${size}`, getAccessTokenSilently);
+    },
+
+    // Get all rooms for a specific hotel with pagination
+    getByHotel: async (hotelId, page = 0, size = 25, getAccessTokenSilently) => {
+      return apiService.get(`/rooms/hotel/${hotelId}?page=${page}&size=${size}`, getAccessTokenSilently);
+    },
+
     // Get all rooms for a specific hotel with DTO format
     getByHotelId: async (hotelId, getAccessTokenSilently) => {
       return apiService.get(`/hotels/${hotelId}/roomsDTO`, getAccessTokenSilently);
@@ -312,6 +341,7 @@ export const apiService = {
     },
 
     // Create a new room for a hotel
+    // FIXED: Use the correct endpoint that exists in the backend
     create: async (hotelId, roomData, getAccessTokenSilently) => {
       return apiService.post(`/rooms/${hotelId}`, roomData, getAccessTokenSilently);
     },

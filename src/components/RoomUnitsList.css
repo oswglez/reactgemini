@@ -1,0 +1,416 @@
+/* RoomUnitsList.css - Styling for Room Units List Component */
+
+.room-units-list-container {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  padding: 20px;
+}
+
+.room-units-list-content {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Back Button */
+.back-button-container {
+  margin-bottom: 20px;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-weight: 500;
+}
+
+.back-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Main Card */
+.room-units-list-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Card Header */
+.card-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 24px 32px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.header-left h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.header-left p {
+  margin: 0;
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+.header-right {
+  display: flex;
+  gap: 12px;
+}
+
+.create-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.create-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Card Content */
+.card-content {
+  padding: 32px;
+}
+
+/* Search and Filters Section */
+.search-filters-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+  font-size: 16px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.filters-container {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.hotel-filter-select {
+  min-width: 200px;
+}
+
+.refresh-button,
+.filter-button,
+.export-button {
+  padding: 8px 16px;
+  border: 1px solid #e1e5e9;
+  background: white;
+  color: #666;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.refresh-button:hover,
+.filter-button:hover,
+.export-button:hover {
+  background: #f8f9fa;
+  border-color: #667eea;
+  color: #667eea;
+}
+
+/* Action Buttons Section */
+.action-buttons-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid #e1e5e9;
+}
+
+.action-buttons-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.selected-count {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.action-buttons-right {
+  display: flex;
+  gap: 12px;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Notifications */
+.notification {
+  margin-bottom: 16px;
+}
+
+/* Loading Container */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+}
+
+/* No Data State */
+.no-data {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.no-data p {
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+/* Data Table */
+.room-units-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-header {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+  padding: 16px 12px;
+  text-align: left;
+  border-bottom: 2px solid #e1e5e9;
+}
+
+.table-row {
+  transition: background-color 0.3s ease;
+}
+
+.table-row:hover {
+  background-color: #f8f9fa;
+}
+
+.table-row.selected {
+  background-color: #e3f2fd;
+}
+
+.checkbox-cell {
+  width: 60px;
+  text-align: center;
+}
+
+.data-cell {
+  padding: 16px 12px;
+  border-bottom: 1px solid #e1e5e9;
+  color: #333;
+}
+
+/* Pagination */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e1e5e9;
+}
+
+/* Debug Info */
+.debug-info {
+  margin-top: 32px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e1e5e9;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #666;
+}
+
+.debug-info p {
+  margin: 4px 0;
+}
+
+/* Error State */
+.error-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.error-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #dc3545;
+  margin-bottom: 16px;
+}
+
+.error-message {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+.retry-button {
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.retry-button:hover {
+  background: #5a6fd8;
+}
+
+/* Delete Modal */
+.delete-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.modal-notification {
+  margin-top: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .room-units-list-container {
+    padding: 16px;
+  }
+  
+  .card-content {
+    padding: 20px;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .search-filters-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-container {
+    max-width: none;
+  }
+  
+  .filters-container {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .action-buttons-section {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .action-buttons-right {
+    justify-content: center;
+  }
+  
+  .room-units-table {
+    font-size: 14px;
+  }
+  
+  .table-header,
+  .data-cell {
+    padding: 12px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-left h1 {
+    font-size: 24px;
+  }
+  
+  .header-left p {
+    font-size: 14px;
+  }
+  
+  .card-header {
+    padding: 20px;
+  }
+  
+  .card-content {
+    padding: 16px;
+  }
+  
+  .room-units-table {
+    font-size: 12px;
+  }
+  
+  .table-header,
+  .data-cell {
+    padding: 8px 4px;
+  }
+} 

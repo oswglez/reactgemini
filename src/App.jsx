@@ -32,6 +32,7 @@ import AmenityTypeList from './components/types/AmenityTypeList';
 import AmenityTypeForm from './components/types/AmenityTypeForm';
 import RoomTypeList from './components/types/RoomTypeList';
 import RoomTypeForm from './components/types/RoomTypeForm';
+import RoomUnitsList from './components/RoomUnitsList';
 import RoomEditForm from './components/RoomEditForm';
 import RoomList from './components/RoomList';
 import RoomNewForm from './components/RoomNewForm';
@@ -116,6 +117,11 @@ function App() {
         <Route path="/types/room" element={<RoomTypeList />} />
         <Route path="/types/room/new" element={<RoomTypeForm />} />
         <Route path="/types/room/edit/:id" element={<RoomTypeForm />} />
+
+        {/* Room Units Routes - Direct access without sidebar */}
+        <Route path="/room-units" element={<RoomUnitsList />} />
+        <Route path="/room-units/new" element={<RoomNewForm />} />
+        <Route path="/room-units/edit/:id" element={<RoomEditForm />} />
 
         {/* Other routes with AppLayout for sidebar navigation */}
         <Route path="/admin" element={<AppLayout />}>

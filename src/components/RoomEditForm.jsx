@@ -7,7 +7,7 @@ import { apiService } from '../services/apiService';
 import { useAuth0 } from '@auth0/auth0-react';
 
 function RoomEditForm() {
-  const { roomId } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
   const { getAccessTokenSilently } = useAuth0();
   const [formData, setFormData] = useState({
@@ -37,7 +37,7 @@ function RoomEditForm() {
       setLoading(true);
       setError(null);
       try {
-        const data = await apiService.roomUnits.getById(roomId, getAccessTokenSilently);
+        const data = await apiService.roomUnits.getById(id, getAccessTokenSilently);
         setFormData({
           roomNumber: data.roomNumber || '',
           roomType: data.roomType || '',
@@ -58,7 +58,7 @@ function RoomEditForm() {
       }
     }
     fetchRoom();
-  }, [roomId, getAccessTokenSilently]);
+  }, [id, getAccessTokenSilently]);
 
   // Cargar tipos de habitación
   useEffect(() => {
@@ -94,7 +94,7 @@ function RoomEditForm() {
     setError(null);
     setSuccess(null);
     try {
-      await apiService.roomUnits.update(roomId, formData, getAccessTokenSilently);
+      await apiService.roomUnits.update(id, formData, getAccessTokenSilently);
       setSuccess('Room updated successfully!');
       setTimeout(() => navigate(-1), 1200);
     } catch (err) {
@@ -111,8 +111,26 @@ function RoomEditForm() {
   return (
     <div style={{ maxWidth: 600, margin: '2rem auto', background: '#fff', padding: 24, borderRadius: 8 }}>
       <h2>Edit Room</h2>
-      {error && <InlineNotification kind="error" title="Error" subtitle={error} style={{ marginBottom: 16 }} />}
-      {success && <InlineNotification kind="success" title="Success" subtitle={success} style={{ marginBottom: 16 }} />}
+      {error && (
+        <InlineNotification 
+          kind="error" 
+          title="Error" 
+          subtitle={error} 
+          style={{ marginBottom: 16 }}
+          lowContrast={true}
+          onCloseButtonClick={() => setError(null)}
+        />
+      )}
+      {success && (
+        <InlineNotification 
+          kind="success" 
+          title="Success" 
+          subtitle={success} 
+          style={{ marginBottom: 16 }}
+          lowContrast={true}
+          onCloseButtonClick={() => setSuccess(null)}
+        />
+      )}
       <Form onSubmit={handleSubmit}>
         <TextInput id="roomNumber" name="roomNumber" labelText="Room Number" value={formData.roomNumber} onChange={handleChange} required style={{ marginBottom: 16 }} />
         <Dropdown

@@ -2,22 +2,22 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
-import './Dashboard.css';
+import './Dashboard.css?v=3';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, isLoading } = useAuth0();
   const quickActions = [
     { icon: '🏨', title: 'Add Hotel', description: 'Onboard new property', variant: 'carbon' },
-    { icon: '🛏️', title: 'Add Room Types', description: 'Configure room types', variant: 'carbon' },
-    { icon: '🚪', title: 'Add Room Units', description: 'Create individual rooms', variant: 'carbon' },
-    { icon: '📷', title: 'Upload Media', description: 'Add photos & floorplans', variant: 'carbon' },
-    { icon: '👥', title: 'Manage Users', description: 'Assign permissions', variant: 'carbon' },
-    { icon: '💰', title: 'Set Pricing', description: 'Configure upsell rates', variant: 'carbon' },
-    { icon: '📊', title: 'View Reports', description: 'Analytics & insights', variant: 'carbon' },
-    { icon: '⬆️', title: 'Bulk Upload', description: 'Mass media import', variant: 'carbon' },
-    { icon: '⚙️', title: 'Settings', description: 'System configuration', variant: 'carbon' },
-    { icon: '📋', title: 'List Template', description: 'View demo & examples', variant: 'carbon' }
+    { icon: '🛏️', title: 'Add Room Types', description: 'Configure room types', variant: 'default' },
+    { icon: '🚪', title: 'Add Room Units', description: 'Create individual rooms', variant: 'default' },
+    { icon: '📷', title: 'Upload Media', description: 'Add photos & floorplans', variant: 'default' },
+    { icon: '👥', title: 'Manage Users', description: 'Assign permissions', variant: 'default' },
+    { icon: '💰', title: 'Set Pricing', description: 'Configure upsell rates', variant: 'default' },
+    { icon: '📊', title: 'View Reports', description: 'Analytics & insights', variant: 'default' },
+    { icon: '⬆️', title: 'Bulk Upload', description: 'Mass media import', variant: 'default' },
+    { icon: '⚙️', title: 'Settings', description: 'System configuration', variant: 'default' },
+    { icon: '📋', title: 'List Template', description: 'View demo & examples', variant: 'gradient' }
   ];
 
   const navigationCards = [
@@ -298,9 +298,11 @@ const Dashboard = () => {
                     navigate('/hotels');
                   } else if (card.title === 'Room Types') {
                     navigate('/types/room');
+                  } else if (card.title === 'Room Units') {
+                    navigate('/room-units');
                   }
                 }}
-                style={{ cursor: (card.title === 'Hotels' || card.title === 'Room Types') ? 'pointer' : 'default' }}
+                style={{ cursor: (card.title === 'Hotels' || card.title === 'Room Types' || card.title === 'Room Units') ? 'pointer' : 'default' }}
               >
                 <div className="card-header">
                   <div className="card-header-top">

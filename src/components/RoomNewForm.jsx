@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Form, TextInput, NumberInput, Button, InlineNotification, Loading, Dropdown
 } from '@carbon/react';
@@ -7,10 +7,11 @@ import { apiService } from '../services/apiService';
 import { useAuth0 } from '@auth0/auth0-react';
 
 function RoomNewForm() {
-  const { hotelId } = useParams();
+  const { hotelId: urlHotelId } = useParams();
   const navigate = useNavigate();
   const { getAccessTokenSilently } = useAuth0();
   const [formData, setFormData] = useState({
+    hotelId: urlHotelId || '',
     roomNumber: '',
     roomType: '',
     roomFloor: '',
@@ -27,7 +28,9 @@ function RoomNewForm() {
   const [fieldErrors, setFieldErrors] = useState({});
   
   const [roomTypeOptions, setRoomTypeOptions] = useState([]);
+  const [hotelOptions, setHotelOptions] = useState([]);
   const [loadingRoomTypes, setLoadingRoomTypes] = useState(true);
+  const [loadingHotels, setLoadingHotels] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
 
@@ -50,14 +53,41 @@ function RoomNewForm() {
     fetchRoomTypes();
   }, [getAccessTokenSilently]);
 
+  useEffect(() => {
+    async function fetchHotels() {
+      setLoadingHotels(true);
+      try {
+        const data = await apiService.hotels.getAll(0, 1000, getAccessTokenSilently);
+        const items = (data.content || data || []).map(hotel => ({
+          id: hotel.hotelId.toString(),
+          text: hotel.hotelName
+        }));
+        setHotelOptions(items);
+      } catch {
+        setHotelOptions([]);
+      } finally {
+        setLoadingHotels(false);
+      }
+    }
+    fetchHotels();
+  }, [getAccessTokenSilently]);
+
   // Validate all required fields
   const validateRequiredFields = () => {
     const errors = {};
 
+    if (!formData.hotelId.trim()) errors.hotelId = "Hotel is required.";
+    
     if (!formData.roomNumber.trim()) errors.roomNumber = "Room number is required.";
     if (isNaN(formData.roomNumber) || parseInt(formData.roomNumber) <= 0) errors.roomNumber = "Room number must be a valid positive number.";
     
     if (!formData.roomType.trim()) errors.roomType = "Room type is required.";
+    
+    // Validate that the selected room type exists in the available options
+    const validRoomTypes = roomTypeOptions.map(opt => opt.id);
+    if (!validRoomTypes.includes(formData.roomType)) {
+      errors.roomType = "Please select a valid room type from the dropdown.";
+    }
     
     if (!formData.roomFloor || formData.roomFloor === '') errors.roomFloor = "Floor is required.";
     if (isNaN(formData.roomFloor) || parseInt(formData.roomFloor) < 0) errors.roomFloor = "Floor must be a valid positive number.";
@@ -124,7 +154,7 @@ function RoomNewForm() {
 
   // Handle dropdown changes
   const handleDropdownChange = ({ selectedItem }) => {
-    const selectedValue = selectedItem ? selectedItem.text : '';
+    const selectedValue = selectedItem ? selectedItem.id : '';
     setFormData(prev => ({ ...prev, roomType: selectedValue }));
     
     // Clear error when user selects an option
@@ -158,12 +188,48 @@ function RoomNewForm() {
     setSaving(true);
     
     try {
-      console.log('Submitting', formData);
-      await apiService.roomUnits.create(hotelId, formData, getAccessTokenSilently);
+      // Map form data to match backend Room model field names exactly
+      const roomData = {
+        roomNumber: parseInt(formData.roomNumber),
+        roomType: formData.roomType,
+        roomName: formData.roomName,
+        roomDescription: formData.roomDescription,
+        roomBuildingName: formData.roomBuildingName,
+        roomBuildingCode: formData.roomBuildingCode,
+        roomFloor: parseInt(formData.roomFloor),
+        roomXCoordinates: formData.roomXCoordinates,
+        roomYCoordinates: formData.roomYCoordinates,
+        roomPrice: parseFloat(formData.roomPrice)
+      };
+
+      console.log('=== FRONTEND - ROOM CREATION REQUEST ===');
+      console.log('Hotel ID:', formData.hotelId);
+      console.log('=== ROOM DATA BEING SENT ===');
+      console.log('roomNumber:', roomData.roomNumber, '(type:', typeof roomData.roomNumber, ')');
+      console.log('roomType:', roomData.roomType, '(type:', typeof roomData.roomType, ')');
+      console.log('roomName:', roomData.roomName, '(type:', typeof roomData.roomName, ')');
+      console.log('roomDescription:', roomData.roomDescription, '(type:', typeof roomData.roomDescription, ')');
+      console.log('roomBuildingName:', roomData.roomBuildingName, '(type:', typeof roomData.roomBuildingName, ')');
+      console.log('roomBuildingCode:', roomData.roomBuildingCode, '(type:', typeof roomData.roomBuildingCode, ')');
+      console.log('roomFloor:', roomData.roomFloor, '(type:', typeof roomData.roomFloor, ')');
+      console.log('roomPrice:', roomData.roomPrice, '(type:', typeof roomData.roomPrice, ')');
+      console.log('roomXCoordinates:', roomData.roomXCoordinates, '(type:', typeof roomData.roomXCoordinates, ')');
+      console.log('roomYCoordinates:', roomData.roomYCoordinates, '(type:', typeof roomData.roomYCoordinates, ')');
+      console.log('=== ORIGINAL FORM DATA ===');
+      console.log('Original formData:', formData);
+      console.log('Selected room type from dropdown:', formData.roomType);
+      console.log('Available room types:', roomTypeOptions);
+      console.log('=== END FRONTEND LOGGING ===');
+      
+      await apiService.roomUnits.create(formData.hotelId, roomData, getAccessTokenSilently);
       setFeedback({ type: 'success', message: 'Room created successfully!' });
       setTimeout(() => navigate(-1), 1200);
     } catch (err) {
+      console.error('=== FRONTEND ERROR ===');
       console.error('Error creating room:', err);
+      console.error('Error response:', err.response);
+      console.error('Error status:', err.status);
+      console.error('Error message:', err.message);
       setFeedback({ type: 'error', message: err.message || 'Error creating room' });
     } finally {
       setSaving(false);
@@ -186,6 +252,30 @@ function RoomNewForm() {
       )}
       
       <Form onSubmit={handleSubmit}>
+        <Dropdown
+          id="hotelId"
+          titleText="Hotel *"
+          label="Select Hotel"
+          items={hotelOptions}
+          itemToString={item => (item ? item.text : '')}
+          value={hotelOptions.find(opt => opt.id === formData.hotelId) || null}
+          selectedItem={hotelOptions.find(opt => opt.id === formData.hotelId) || null}
+          onChange={({ selectedItem }) => {
+            const selectedValue = selectedItem ? selectedItem.id : '';
+            setFormData(prev => ({ ...prev, hotelId: selectedValue }));
+            if (fieldErrors.hotelId) {
+              setFieldErrors(prev => ({ ...prev, hotelId: undefined }));
+            }
+            setFeedback({ type: '', message: '' });
+          }}
+          onBlur={() => handleBlur('hotelId')}
+          disabled={loadingHotels}
+          required
+          invalid={!!fieldErrors.hotelId}
+          invalidText={fieldErrors.hotelId}
+          placeholder="Select hotel"
+          style={{ marginBottom: 16 }}
+        />
         <TextInput 
           id="roomNumber" 
           name="roomNumber" 
@@ -199,23 +289,38 @@ function RoomNewForm() {
           placeholder="Enter room number"
           style={{ marginBottom: 16 }} 
         />
-        <Dropdown
-          id="roomType"
-          titleText="Room Type *"
-          label="Select Room Type"
-          items={roomTypeOptions}
-          itemToString={item => (item ? item.text : '')}
-          value={roomTypeOptions.find(opt => opt.id === formData.roomType) || null}
-          selectedItem={roomTypeOptions.find(opt => opt.id === formData.roomType) || null}
-          onChange={handleDropdownChange}
-          onBlur={() => handleBlur('roomType')}
-          disabled={loadingRoomTypes}
-          required
-          invalid={!!fieldErrors.roomType}
-          invalidText={fieldErrors.roomType}
-          placeholder="Select room type"
-          style={{ marginBottom: 16 }}
-        />
+        <div style={{ marginBottom: 16 }}>
+          <Dropdown
+            id="roomType"
+            titleText="Room Type *"
+            label="Select Room Type"
+            items={roomTypeOptions}
+            itemToString={item => (item ? item.text : '')}
+            value={roomTypeOptions.find(opt => opt.id === formData.roomType) || null}
+            selectedItem={roomTypeOptions.find(opt => opt.id === formData.roomType) || null}
+            onChange={handleDropdownChange}
+            onBlur={() => handleBlur('roomType')}
+            disabled={loadingRoomTypes}
+            required
+            invalid={!!fieldErrors.roomType}
+            invalidText={fieldErrors.roomType}
+            placeholder="Select room type"
+          />
+          {roomTypeOptions.length === 0 && !loadingRoomTypes && (
+            <div style={{ marginTop: 8, fontSize: '14px', color: '#666' }}>
+              No room types available. Please create room types first.
+            </div>
+          )}
+          {roomTypeOptions.length > 0 && (
+            <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
+              Available types: {roomTypeOptions.map(opt => opt.id).join(', ')}
+              <br />
+              <Link to="/types/room/new" style={{ color: '#0f62fe', textDecoration: 'none' }}>
+                Create new room type
+              </Link>
+            </div>
+          )}
+        </div>
         <NumberInput 
           id="roomFloor" 
           name="roomFloor" 
