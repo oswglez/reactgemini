@@ -38,6 +38,7 @@ import RoomList from './components/RoomList';
 import RoomNewForm from './components/RoomNewForm';
 import UserList from './components/UserList';
 import UserEditForm from './components/UserEditForm';
+import UserNewForm from './components/UserNewForm';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -127,6 +128,11 @@ function App() {
         <Route path="/amenities" element={<AmenityList />} />
         <Route path="/amenities/new" element={<AmenityNewForm />} />
         <Route path="/amenities/edit/:id" element={<AmenityEditForm />} />
+
+        {/* Users Routes - Direct access without sidebar */}
+        <Route path="/users" element={<UserList />} />
+        <Route path="/users/new" element={<UserNewForm />} />
+        <Route path="/users/edit/:id" element={<UserEditForm />} />
 
         {/* Other routes with AppLayout for sidebar navigation */}
         <Route path="/admin" element={<AppLayout />}>

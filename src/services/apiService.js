@@ -274,12 +274,24 @@ export const apiService = {
 
   // Role management methods
   roles: {
-    getAll: async (getAccessTokenSilently) => {
-      return apiService.get('/roles', getAccessTokenSilently);
+    getAll: async (page = 0, size = 25, getAccessTokenSilently) => {
+      return apiService.get(`/roles?page=${page}&size=${size}`, getAccessTokenSilently);
     },
 
     getById: async (id, getAccessTokenSilently) => {
       return apiService.get(`/roles/${id}`, getAccessTokenSilently);
+    },
+
+    create: async (roleData, getAccessTokenSilently) => {
+      return apiService.post('/roles', roleData, getAccessTokenSilently);
+    },
+
+    update: async (id, roleData, getAccessTokenSilently) => {
+      return apiService.put(`/roles/${id}`, roleData, getAccessTokenSilently);
+    },
+
+    delete: async (id, getAccessTokenSilently) => {
+      return apiService.delete(`/roles/${id}`, getAccessTokenSilently);
     }
   },
 
@@ -393,4 +405,29 @@ export const apiService = {
       return apiService.get(`/rooms/${hotelId}/roomId/${roomId}/media`, getAccessTokenSilently);
     }
   },
+
+  // Users management methods
+  users: {
+    getAll: async (page = 0, size = 25, getAccessTokenSilently) => {
+      return apiService.get(`/users?page=${page}&size=${size}`, getAccessTokenSilently);
+    },
+
+    getById: async (id, getAccessTokenSilently) => {
+      return apiService.get(`/users/${id}`, getAccessTokenSilently);
+    },
+
+    create: async (userData, getAccessTokenSilently) => {
+      return apiService.post('/users', userData, getAccessTokenSilently);
+    },
+
+    update: async (id, userData, getAccessTokenSilently) => {
+      return apiService.put(`/users/${id}`, userData, getAccessTokenSilently);
+    },
+
+    delete: async (id, getAccessTokenSilently) => {
+      return apiService.delete(`/users/${id}`, getAccessTokenSilently);
+    }
+  },
+
+
 }; 

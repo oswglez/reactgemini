@@ -14,8 +14,9 @@ import {
 } from '@carbon/react';
 import { Add, Close } from '@carbon/icons-react';
 import { useAuthenticatedFetch } from '../services/apiService';
+import { useNavigate } from 'react-router-dom';
 
-const UserNewForm = ({ onUserCreated, onCancel }) => {
+const UserNewForm = ({ onUserCreated }) => {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
   const [roles, setRoles] = useState([]);
@@ -58,6 +59,7 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
   });
 
   const authenticatedFetch = useAuthenticatedFetch();
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadFormData();
@@ -574,11 +576,41 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
 
       if (response.ok) {
         const newUser = await response.json();
+        console.log('User created successfully:', newUser);
+        
         setNotification({
           kind: 'success',
           title: 'Success',
-          subtitle: 'User created successfully'
+          subtitle: 'User created successfully! Redirecting to user list...'
         });
+        
+        // Clear form data
+        setFormData({
+          firstName: '',
+          lastName: '',
+          username: '',
+          email: '',
+          password: '',
+          isActive: true,
+          roleId: null,
+          chainId: null,
+          brandId: null,
+          hotelId: null
+        });
+        
+        // Reset selections
+        setSelectedRole(null);
+        setSelectedChain(null);
+        setSelectedBrand(null);
+        setSelectedHotel(null);
+        
+        // Clear field errors
+        setFieldErrors({});
+        
+        // Redirect to user list after 2 seconds
+        setTimeout(() => {
+          navigate('/users');
+        }, 2000);
         
         if (onUserCreated) {
           onUserCreated(newUser);
@@ -621,7 +653,14 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
           title={notification.title}
           subtitle={notification.subtitle}
           onClose={() => setNotification(null)}
-          style={{ marginBottom: '1rem' }}
+          style={{ 
+            marginBottom: '1rem',
+            ...(notification.kind === 'success' && {
+              backgroundColor: '#defbe6',
+              borderColor: '#24a148',
+              color: '#0e6027'
+            })
+          }}
         />
       )}
 
@@ -733,7 +772,7 @@ const UserNewForm = ({ onUserCreated, onCancel }) => {
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
-          <Button kind="tertiary" onClick={onCancel}>
+          <Button kind="tertiary" onClick={() => navigate('/users')}>
             Cancel
           </Button>
           <Button kind="primary" type="submit" disabled={!isFormValid()}>
