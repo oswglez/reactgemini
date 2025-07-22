@@ -1,0 +1,497 @@
+/* MediaEditForm.css - Estilos basados en Lovable */
+
+/* Form container fixes */
+.media-edit-form-container {
+  min-height: 100vh;
+  background: #f8fafc;
+  padding: 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.media-edit-form-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure the form itself doesn't interfere with dropdowns */
+.media-edit-form-content form {
+  position: relative;
+  z-index: 1;
+}
+
+/* Header Navigation */
+.header-navigation {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 0;
+}
+
+.nav-button {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  padding: 0.5rem 0.875rem !important;
+  background: #3b82f6 !important;
+  border: 1px solid #3b82f6 !important;
+  border-radius: 6px !important;
+  color: white !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease !important;
+  font-size: 0.875rem !important;
+  cursor: pointer !important;
+}
+
+.nav-button:hover {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  text-decoration: none !important;
+}
+
+.nav-button:active {
+  background: #1d4ed8 !important;
+  transform: translateY(1px) !important;
+}
+
+.nav-button.back-button {
+  background: #ffffff !important;
+  border: 1px solid #3b82f6 !important;
+  color: #3b82f6 !important;
+}
+
+.nav-button.back-button:hover {
+  background: #f8fafc !important;
+  border-color: #2563eb !important;
+  color: #2563eb !important;
+}
+
+.nav-icon {
+  font-size: 1rem;
+}
+
+.page-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+  margin-left: auto;
+}
+
+/* Section Cards */
+.section-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 1.5rem 1.5rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 1rem 0;
+}
+
+.section-content {
+  padding: 1.5rem;
+}
+
+/* Ensure form container has enough space for dropdowns */
+.section-content {
+  padding: 1.5rem;
+  position: relative;
+  z-index: 1;
+  min-height: 400px; /* Ensure enough space for dropdown */
+}
+
+/* Add extra space around dropdown fields */
+.form-row:has(.form-dropdown) {
+  margin-bottom: 3rem;
+  position: relative;
+  z-index: 50;
+}
+
+/* Ensure the dropdown field itself has proper spacing */
+.form-field:has(.form-dropdown) {
+  position: relative;
+  z-index: 100;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+}
+
+/* Force dropdown to appear above everything */
+.form-field:has(.form-dropdown) .cds--dropdown--open {
+  z-index: 9999 !important;
+}
+
+.form-field:has(.form-dropdown) .cds--dropdown--open .cds--dropdown__list {
+  z-index: 9999 !important;
+  position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  background: white !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  max-height: 200px !important;
+  overflow-y: auto !important;
+}
+
+/* Form Styles - Elegant Layout */
+.form-row {
+  display: grid;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-row:last-child {
+  margin-bottom: 0;
+}
+
+.form-row.two-columns {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.form-row.three-columns {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.form-row.full-width {
+  grid-template-columns: 1fr;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.field-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  line-height: 1.25rem;
+}
+
+.form-input,
+.form-dropdown {
+  width: 100%;
+}
+
+.form-input .cds--text-input__field-wrapper,
+.form-input .cds--number__input-wrapper,
+.form-dropdown .cds--list-box__field {
+  background-color: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.form-input .cds--text-input__field-wrapper:hover,
+.form-input .cds--number__input-wrapper:hover,
+.form-dropdown .cds--list-box__field:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.form-input .cds--text-input__field-wrapper:focus-within,
+.form-input .cds--number__input-wrapper:focus-within,
+.form-dropdown .cds--list-box__field:focus-within {
+  background-color: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-input .cds--text-input__field-wrapper.cds--text-input--invalid,
+.form-input .cds--number__input-wrapper.cds--number--invalid,
+.form-dropdown .cds--list-box__field.cds--list-box--invalid {
+  border-color: #ef4444;
+}
+
+.form-input .cds--text-input__field-wrapper.cds--text-input--invalid:focus-within,
+.form-input .cds--number__input-wrapper.cds--number--invalid:focus-within,
+.form-dropdown .cds--list-box__field.cds--list-box--invalid:focus-within {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-input .cds--text-input__field-wrapper input,
+.form-input .cds--number__input-wrapper input,
+.form-dropdown .cds--list-box__field input {
+  background: transparent;
+  border: none;
+  color: #111827;
+  font-size: 0.875rem;
+  padding: 0.75rem;
+  width: 100%;
+}
+
+.form-input .cds--text-input__field-wrapper input:focus,
+.form-input .cds--number__input-wrapper input:focus,
+.form-dropdown .cds--list-box__field input:focus {
+  outline: none;
+  background: transparent;
+}
+
+.required-mark {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* Button Container */
+.button-container {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .media-edit-form-container {
+    padding: 1rem;
+  }
+  
+  .media-edit-form-content {
+    max-width: 100%;
+  }
+  
+  .form-row.two-columns,
+  .form-row.three-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-navigation {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .page-title {
+    font-size: 1.5rem;
+    margin-left: 0;
+  }
+  
+  .section-header {
+    padding: 1rem 1rem 0;
+  }
+  
+  .section-content {
+    padding: 1rem;
+  }
+  
+  .section-title {
+    font-size: 1.125rem;
+  }
+  
+  .form-row {
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .button-container {
+    flex-direction: column;
+  }
+  
+  .button-container button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .media-edit-form-container {
+    padding: 0.5rem;
+  }
+  
+  .section-header {
+    padding: 0.75rem 0.75rem 0;
+  }
+  
+  .section-content {
+    padding: 0.75rem;
+  }
+  
+  .section-title {
+    font-size: 1rem;
+  }
+} 
+
+/* Notification Styles */
+.cds--inline-notification--success {
+  background-color: #defbe6 !important;
+  border: 1px solid #24a148 !important;
+  color: #0e6027 !important;
+}
+
+.cds--inline-notification--success .cds--inline-notification__icon {
+  fill: #24a148 !important;
+}
+
+.cds--inline-notification--error {
+  background-color: #ffd7d9 !important;
+  border: 1px solid #da1e28 !important;
+  color: #750e13 !important;
+}
+
+.cds--inline-notification--error .cds--inline-notification__icon {
+  fill: #da1e28 !important;
+}
+
+/* Dropdown Styles */
+.form-dropdown {
+  width: 100%;
+  position: relative;
+  z-index: 50;
+}
+
+.form-dropdown .cds--dropdown__field-wrapper {
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  position: relative;
+  z-index: 50;
+}
+
+.form-dropdown .cds--dropdown__field-wrapper:hover {
+  border-color: #9ca3af;
+}
+
+.form-dropdown .cds--dropdown__field-wrapper:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Ensure dropdowns appear above other elements */
+.cds--dropdown-list,
+.cds--list-box__menu {
+  z-index: 9999 !important;
+  position: relative !important;
+}
+
+/* Additional z-index fixes for Carbon dropdowns */
+.cds--dropdown__list,
+.cds--dropdown__list--open {
+  z-index: 9999 !important;
+  position: absolute !important;
+}
+
+/* Fix for dropdown container */
+.cds--dropdown {
+  position: relative;
+  z-index: 50;
+}
+
+/* Ensure the dropdown field has proper z-index when open */
+.cds--dropdown--open .cds--dropdown__field-wrapper {
+  z-index: 9999 !important;
+}
+
+/* Fix for any overlapping elements */
+.form-field {
+  position: relative;
+  z-index: 1;
+}
+
+.form-field:has(.cds--dropdown--open) {
+  z-index: 9999 !important;
+} 
+
+/* Global fixes for Carbon dropdowns */
+.cds--dropdown__list,
+.cds--dropdown__list--open,
+.cds--list-box__menu,
+.cds--list-box__menu--open {
+  z-index: 9999 !important;
+  position: absolute !important;
+  background: white !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Fix for dropdown items */
+.cds--dropdown__item,
+.cds--list-box__menu-item {
+  z-index: 9999 !important;
+  position: relative !important;
+}
+
+/* Ensure the dropdown container has proper stacking context */
+.cds--dropdown,
+.cds--list-box {
+  position: relative !important;
+  z-index: 50 !important;
+}
+
+/* When dropdown is open, increase z-index */
+.cds--dropdown--open,
+.cds--list-box--expanded {
+  z-index: 9999 !important;
+}
+
+/* Fix for any parent containers that might interfere */
+.section-card,
+.section-content,
+.form-row,
+.form-field {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure form fields with dropdowns have higher z-index when needed */
+.form-field:has(.cds--dropdown--open),
+.form-field:has(.cds--list-box--expanded) {
+  z-index: 9999 !important;
+} 
+
+/* Specific styles for Media Type dropdown */
+.form-field:has(.form-dropdown) {
+  position: relative;
+  z-index: 100;
+  margin-bottom: 2rem;
+}
+
+.form-field:has(.form-dropdown) .form-dropdown {
+  position: relative;
+  z-index: 100;
+}
+
+/* Ensure dropdown has enough space */
+.form-field:has(.form-dropdown) .cds--dropdown {
+  position: relative;
+  z-index: 100;
+}
+
+.form-field:has(.form-dropdown) .cds--dropdown__list {
+  z-index: 9999 !important;
+  position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  max-height: 200px !important;
+  overflow-y: auto !important;
+  background: white !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Add space below the dropdown field */
+.form-field:has(.form-dropdown) {
+  padding-bottom: 1rem;
+} 

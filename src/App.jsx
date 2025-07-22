@@ -39,6 +39,8 @@ import RoomNewForm from './components/RoomNewForm';
 import UserList from './components/UserList';
 import UserEditForm from './components/UserEditForm';
 import UserNewForm from './components/UserNewForm';
+import MediaList from './components/MediaList';
+import MediaEditForm from './components/MediaEditForm';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -133,6 +135,11 @@ function App() {
         <Route path="/users" element={<UserList />} />
         <Route path="/users/new" element={<UserNewForm />} />
         <Route path="/users/edit/:id" element={<UserEditForm />} />
+
+        {/* Media Routes - Direct access without sidebar */}
+        <Route path="/media" element={<MediaList />} />
+        <Route path="/media/new" element={<MediaEditForm />} />
+        <Route path="/media/edit/:id" element={<MediaEditForm />} />
 
         {/* Other routes with AppLayout for sidebar navigation */}
         <Route path="/admin" element={<AppLayout />}>

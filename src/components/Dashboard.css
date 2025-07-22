@@ -808,3 +808,15 @@ html, body {
     gap: 0.25rem;
   }
 } 
+
+/* Action buttons without navigation should not show pointer cursor */
+.dashboard-container .quick-actions-grid .action-button:not([onclick]),
+.dashboard-container .quick-actions-card .action-button:not([onclick]) {
+  cursor: default !important;
+}
+
+.dashboard-container .quick-actions-grid .action-button:not([onclick]):hover,
+.dashboard-container .quick-actions-card .action-button:not([onclick]):hover {
+  transform: none !important;
+  box-shadow: var(--shadow-sm) !important;
+} 

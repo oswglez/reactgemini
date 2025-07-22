@@ -268,6 +268,19 @@ const Dashboard = () => {
                 <button 
                   key={index} 
                   className={`action-button action-${action.variant}`}
+                  onClick={() => {
+                    if (action.title === 'Add Hotel') {
+                      navigate('/hotel/new');
+                    } else if (action.title === 'Add Room Types') {
+                      navigate('/types/room/new');
+                    } else if (action.title === 'Add Room Units') {
+                      navigate('/room-units/new');
+                    } else if (action.title === 'Manage Users') {
+                      navigate('/users');
+                    } else if (action.title === 'Upload Media') {
+                      navigate('/media/new');
+                    }
+                  }}
                 >
                   <span className="action-icon">{action.icon}</span>
                   <div className="action-text">
@@ -304,9 +317,11 @@ const Dashboard = () => {
                     navigate('/amenities');
                   } else if (card.title === 'Users & Permissions') {
                     navigate('/users');
+                  } else if (card.title === 'Media Library') {
+                    navigate('/media');
                   }
                 }}
-                style={{ cursor: (card.title === 'Hotels' || card.title === 'Room Types' || card.title === 'Room Units' || card.title === 'Amenities' || card.title === 'Users & Permissions') ? 'pointer' : 'default' }}
+                style={{ cursor: (card.title === 'Hotels' || card.title === 'Room Types' || card.title === 'Room Units' || card.title === 'Amenities' || card.title === 'Users & Permissions' || card.title === 'Media Library') ? 'pointer' : 'default' }}
               >
                 <div className="card-header">
                   <div className="card-header-top">
