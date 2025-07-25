@@ -39,7 +39,7 @@
 
 /* Card Header */
 .card-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #0066cc;
   color: white;
   padding: 24px 32px;
 }
@@ -125,7 +125,7 @@
 
 .search-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #0066cc;
 }
 
 .filters-container {
@@ -154,8 +154,8 @@
 .filter-button:hover,
 .export-button:hover {
   background: #f8f9fa;
-  border-color: #667eea;
-  color: #667eea;
+  border-color: #0066cc;
+  color: #0066cc;
 }
 
 /* Action Buttons Section */
@@ -238,9 +238,9 @@
 }
 
 .table-header {
-  background: #f8f9fa;
+  background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+  color: white;
   font-weight: 600;
-  color: #333;
   padding: 16px 12px;
   text-align: left;
   border-bottom: 2px solid #e1e5e9;
@@ -315,7 +315,7 @@
 
 .retry-button {
   padding: 12px 24px;
-  background: #667eea;
+  background: #0066cc;
   color: white;
   border: none;
   border-radius: 8px;
@@ -325,7 +325,7 @@
 }
 
 .retry-button:hover {
-  background: #5a6fd8;
+  background: #0052a3;
 }
 
 /* Delete Modal */

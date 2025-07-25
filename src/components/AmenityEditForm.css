@@ -157,15 +157,15 @@
 .form-input:focus,
 .form-dropdown:focus,
 .form-textarea:focus {
-  border-color: #667eea !important;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
+  border-color: #0066cc !important;
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2) !important;
   background: rgba(255, 255, 255, 1) !important;
 }
 
 .form-input:hover,
 .form-dropdown:hover,
 .form-textarea:hover {
-  border-color: rgba(102, 126, 234, 0.5) !important;
+  border-color: rgba(0, 102, 204, 0.5) !important;
   background: rgba(255, 255, 255, 0.95) !important;
 }
 
@@ -214,13 +214,13 @@
 }
 
 .save-button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: #0066cc !important;
   border: none !important;
   color: white !important;
   font-weight: 600 !important;
   padding: 0.75rem 1.5rem !important;
   border-radius: 12px !important;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+  box-shadow: 0 4px 15px rgba(0, 102, 204, 0.4) !important;
   transition: all 0.3s ease !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -229,7 +229,7 @@
 
 .save-button:hover:not(:disabled) {
   transform: translateY(-2px) !important;
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
+  box-shadow: 0 6px 20px rgba(0, 102, 204, 0.6) !important;
 }
 
 .save-button:disabled {

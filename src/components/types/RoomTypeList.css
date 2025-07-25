@@ -344,8 +344,8 @@
 }
 
 .table-header {
-  background: #f8fafc;
-  color: #374151;
+  background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+  color: white;
   font-weight: 600;
   font-size: 0.875rem;
   padding: 1rem 0.75rem;
@@ -355,7 +355,7 @@
 }
 
 .table-header:hover {
-  background: #f1f5f9;
+  background: linear-gradient(135deg, #0052a3 0%, #004080 100%);
 }
 
 .table-row {

@@ -26,6 +26,7 @@
   --carbon-gray-90: hsl(213, 10%, 21%);
   --carbon-blue-60: hsl(208, 100%, 30%);
   --carbon-blue-70: hsl(208, 100%, 26%);
+  --solid-blue: #0066cc;
   
   /* Gradients FROM LOVABLE MODEL */
   --gradient-primary: linear-gradient(135deg, hsl(208, 100%, 30%), hsl(208, 100%, 26%));
@@ -270,8 +271,13 @@ html, body {
   overflow: hidden;
 }
 
-.card-header {
+.quick-actions-card .card-header,
+.recent-activity-card .card-header {
   padding: 1.5rem 1.5rem 0;
+  background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+  margin: -1.5rem -1.5rem 0 -1.5rem;
+  padding: 1.5rem;
+  color: white;
 }
 
 .card-title {
@@ -284,9 +290,17 @@ html, body {
   margin: 0;
 }
 
-.title-icon {
+.quick-actions-card .card-title,
+.recent-activity-card .card-title {
+  color: white !important;
+}
+
+.title-icon,
+.dashboard-container .title-icon,
+.quick-actions-card .title-icon {
   padding: 0.25rem;
-  background: var(--gradient-primary);
+  background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
+  background-color: #0066cc !important;
   border-radius: 0.25rem;
   font-size: 1rem;
   color: white;
@@ -440,8 +454,11 @@ html, body {
   gap: 1.5rem;
 }
 
-.navigation-card {
-  background: var(--gradient-card);
+.navigation-card,
+.dashboard-container .navigation-card,
+.dashboard-container .navigation-section .navigation-card {
+  background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
+  background-color: #0066cc !important;
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
@@ -465,9 +482,12 @@ html, body {
   margin-bottom: 0.75rem;
 }
 
-.card-icon-container {
+.card-icon-container,
+.dashboard-container .card-icon-container,
+.navigation-card .card-icon-container {
   padding: 0.5rem;
-  background: var(--gradient-primary);
+  background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
+  background-color: #0066cc !important;
   border-radius: 0.5rem;
 }
 
@@ -511,18 +531,18 @@ html, body {
 
 .arrow-icon {
   font-size: 1rem;
-  color: var(--muted-foreground);
+  color: rgba(255, 255, 255, 0.8);
   transition: var(--transition-smooth);
 }
 
 .navigation-card:hover .arrow-icon {
-  color: var(--primary);
+  color: white;
 }
 
 .card-title {
   font-size: 1.125rem;
   font-weight: 600;
-  color: var(--foreground);
+  color: white;
   margin: 0;
 }
 
@@ -532,7 +552,7 @@ html, body {
 
 .card-description {
   font-size: 0.875rem;
-  color: var(--muted-foreground);
+  color: rgba(255, 255, 255, 0.9);
   margin: 0 0 0.75rem 0;
   line-height: 1.5;
 }
@@ -548,7 +568,7 @@ html, body {
 
 .card-item {
   font-size: 0.75rem;
-  color: var(--muted-foreground);
+  color: rgba(255, 255, 255, 0.8);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -557,7 +577,7 @@ html, body {
 .item-bullet {
   width: 0.25rem;
   height: 0.25rem;
-  background: var(--primary);
+  background: white;
   border-radius: 50%;
   flex-shrink: 0;
 }

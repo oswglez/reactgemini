@@ -379,8 +379,8 @@
 }
 
 .table-header {
-  background: #f8f9fa !important;
-  color: #495057 !important;
+  background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
+  color: white !important;
   font-weight: 600 !important;
   border-bottom: 1px solid #e9ecef !important;
   padding: 1rem !important;

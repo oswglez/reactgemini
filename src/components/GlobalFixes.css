@@ -1,0 +1,210 @@
+/* Global fixes for Carbon components affected by gradient changes */
+
+/* Fix DataTable headers */
+.bx--data-table .bx--table-header {
+  background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
+  color: white !important;
+}
+
+.bx--data-table .bx--table-header:hover {
+  background: linear-gradient(135deg, #0052a3 0%, #004080 100%) !important;
+}
+
+/* Fix DataTable sorting arrows */
+.bx--data-table .bx--table-sort {
+  color: white !important;
+}
+
+.bx--data-table .bx--table-sort__icon {
+  color: white !important;
+}
+
+.bx--data-table .bx--table-sort__icon--asc {
+  color: white !important;
+}
+
+.bx--data-table .bx--table-sort__icon--desc {
+  color: white !important;
+}
+
+/* Fix DataTable header text */
+.bx--data-table .bx--table-header-label {
+  color: white !important;
+}
+
+/* Ensure column names are visible */
+.bx--data-table .bx--table-header-label,
+.bx--data-table .bx--table-header,
+.table-header,
+th,
+thead th {
+  display: table-cell !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: white !important;
+}
+
+/* Fix pagination layout to be horizontal */
+.bx--pagination {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+  flex-wrap: nowrap !important;
+}
+
+.bx--pagination__left {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 1rem !important;
+  flex-wrap: nowrap !important;
+}
+
+.bx--pagination__right {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 1rem !important;
+  flex-wrap: nowrap !important;
+}
+
+/* Force pagination items to be inline */
+.bx--pagination .bx--pagination__items-per-page,
+.bx--pagination .bx--pagination__page-size,
+.bx--pagination .bx--pagination__page-sizes,
+.bx--pagination .bx--pagination__page-selector,
+.bx--pagination .bx--pagination__navigation {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+/* Fix pagination button colors */
+.bx--pagination .bx--btn {
+  color: #0066cc !important;
+  border-color: #0066cc !important;
+}
+
+.bx--pagination .bx--btn--primary {
+  background: #0066cc !important;
+  color: white !important;
+}
+
+.bx--pagination .bx--btn--danger {
+  background: #dc2626 !important;
+  color: white !important;
+}
+
+/* Fix pagination navigation arrows */
+.bx--pagination .bx--pagination__button {
+  color: #0066cc !important;
+  border-color: #0066cc !important;
+}
+
+.bx--pagination .bx--pagination__button:hover {
+  background: rgba(0, 102, 204, 0.1) !important;
+}
+
+.bx--pagination .bx--pagination__button--forward,
+.bx--pagination .bx--pagination__button--backward {
+  color: #0066cc !important;
+  border-color: #0066cc !important;
+}
+
+.bx--pagination .bx--pagination__button--forward:hover,
+.bx--pagination .bx--pagination__button--backward:hover {
+  background: rgba(0, 102, 204, 0.1) !important;
+}
+
+/* Fix modal button text */
+.bx--modal .bx--btn--danger {
+  background: #dc2626 !important;
+  color: white !important;
+  border: none !important;
+}
+
+.bx--modal .bx--btn--danger:hover {
+  background: #b91c1c !important;
+}
+
+.bx--modal .bx--btn--secondary {
+  background: #f3f4f6 !important;
+  color: #374151 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.bx--modal .bx--btn--secondary:hover {
+  background: #e5e7eb !important;
+}
+
+/* Fix any button with danger text */
+.bx--btn[class*="danger"] {
+  background: #dc2626 !important;
+  color: white !important;
+  border: none !important;
+}
+
+.bx--btn[class*="danger"]:hover {
+  background: #b91c1c !important;
+}
+
+/* Fix modal button text specifically */
+.bx--modal .bx--btn {
+  font-weight: 400 !important;
+}
+
+.bx--modal .bx--btn--danger {
+  font-weight: 400 !important;
+}
+
+/* Fix any button text that might be malformed */
+.bx--modal .bx--btn--danger .bx--btn__content {
+  font-weight: 400 !important;
+}
+
+/* Ensure modal buttons have proper text */
+.bx--modal .bx--btn--danger {
+  text-transform: none !important;
+}
+
+.bx--modal .bx--btn--secondary {
+  text-transform: none !important;
+}
+
+/* Fix any malformed button text */
+.bx--modal .bx--btn--danger .bx--btn__content,
+.bx--modal .bx--btn--secondary .bx--btn__content {
+  text-transform: none !important;
+  font-weight: 400 !important;
+}
+
+/* Ensure proper button text display */
+.bx--modal .bx--btn--danger {
+  white-space: nowrap !important;
+}
+
+.bx--modal .bx--btn--secondary {
+  white-space: nowrap !important;
+}
+
+/* Fix any other Carbon components that might be affected */
+.bx--btn--primary {
+  background: #0066cc !important;
+  color: white !important;
+}
+
+.bx--btn--primary:hover {
+  background: #0052a3 !important;
+}
+
+.bx--btn--danger {
+  background: #dc2626 !important;
+  color: white !important;
+}
+
+.bx--btn--danger:hover {
+  background: #b91c1c !important;
+} 

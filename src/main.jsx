@@ -5,7 +5,9 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { Auth0Provider } from "@auth0/auth0-react";
 import './index.css';
-import '@carbon/styles/css/styles.css';
+import './components/GlobalFixes.css';
+import './components/SortInstructionsRemover.js';
+// import '@carbon/styles/css/styles.css';
 
 
 ReactDOM.createRoot(document.getElementById('root')).render(

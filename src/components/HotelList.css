@@ -332,8 +332,8 @@
 }
 
 .table-header {
-  background: #f8fafc;
-  color: #374151;
+  background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+  color: white;
   font-weight: 600;
   font-size: 0.875rem;
   padding: 1rem 0.75rem;
@@ -343,12 +343,40 @@
 }
 
 .table-header:hover {
-  background: #f1f5f9;
+  background: linear-gradient(135deg, #0052a3 0%, #004080 100%);
 }
 
 .sort-icon {
   margin-left: 0.5rem;
-  color: #64748b;
+  color: white;
+}
+
+/* Fix DataTable sorting arrows */
+.bx--data-table .bx--table-sort {
+  color: white !important;
+}
+
+.bx--data-table .bx--table-sort__icon {
+  color: white !important;
+}
+
+.bx--data-table .bx--table-sort__icon--asc {
+  color: white !important;
+}
+
+.bx--data-table .bx--table-sort__icon--desc {
+  color: white !important;
+}
+
+/* Fix DataTable header text */
+.bx--data-table .bx--table-header-label {
+  color: white !important;
+}
+
+/* Hide [object Object] text */
+.bx--data-table .bx--table-header-label::before,
+.bx--data-table .bx--table-header-label::after {
+  content: none !important;
 }
 
 .table-row {
@@ -445,6 +473,45 @@
   border: 1px solid #e2e8f0;
 }
 
+/* Fix pagination layout to be horizontal */
+.pagination-container .bx--pagination {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+}
+
+.pagination-container .bx--pagination__left {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 1rem !important;
+}
+
+.pagination-container .bx--pagination__right {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 1rem !important;
+}
+
+/* Fix pagination button colors */
+.pagination-container .bx--btn {
+  color: #0066cc !important;
+  border-color: #0066cc !important;
+}
+
+.pagination-container .bx--btn--primary {
+  background: #0066cc !important;
+  color: white !important;
+}
+
+.pagination-container .bx--btn--danger {
+  background: #dc2626 !important;
+  color: white !important;
+}
+
 /* Delete Modal - Improved styling */
 .delete-modal {
   background: rgba(0, 0, 0, 0.6);
@@ -474,6 +541,27 @@
   border-top: 1px solid #e2e8f0;
   border-radius: 0 0 16px 16px;
   padding: 1.5rem;
+}
+
+/* Fix modal button text */
+.delete-modal .bx--btn--danger {
+  background: #dc2626 !important;
+  color: white !important;
+  border: none !important;
+}
+
+.delete-modal .bx--btn--danger:hover {
+  background: #b91c1c !important;
+}
+
+.delete-modal .bx--btn--secondary {
+  background: #f3f4f6 !important;
+  color: #374151 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.delete-modal .bx--btn--secondary:hover {
+  background: #e5e7eb !important;
 }
 
 .modal-notification {
